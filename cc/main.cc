@@ -9,6 +9,7 @@
 
 #include <gflags/gflags.h>
 
+#include "capture.h"
 #include "logging.h"
 #include "operators.h"
 #include "robot.h"
@@ -22,6 +23,7 @@
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
+DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
 DEFINE_bool(
     wait_between_images, true,
     "When doing detection on images, set to true to wait after each image.");
@@ -268,7 +270,7 @@ void DetectImages(Recognizer *recognizer, int argc, char **argv) {
   }
 }
 
-void DetectWebcam(Recognizer *recognizer) {
+void DetectWebcam(CaptureSource* capture, Recognizer *recognizer) {
   std::mutex mu;
   std::condition_variable latest_image_cv;
   std::pair<time_point, cv::Mat> latest_image;
@@ -276,21 +278,14 @@ void DetectWebcam(Recognizer *recognizer) {
   bool latest_image_ready = false;
 
   std::thread capture_thread([&] {
-    cv::VideoCapture capture{FLAGS_webcam};
-    QCHECK(capture.isOpened()) << "Failed to open --webcam=" << FLAGS_webcam;
-    // A return value of false doesn't mean the prop set failed!
-    QCHECK(capture.set(cv::CAP_PROP_FRAME_WIDTH, kImageSize.x) || true)
-        << " tried to set width to " << kImageSize.x;
-    QCHECK(capture.set(cv::CAP_PROP_FRAME_HEIGHT, kImageSize.y) || true)
-        << " tried to set height to " << kImageSize.y;
     while (!done.load(std::memory_order_relaxed)) {
       cv::Mat image;
-      if (!capture.grab()) {  // Defer decoding until after we calculate the timestamp.
+      if (!capture->grab()) {  // Defer decoding until after we calculate the timestamp.
         std::cerr << "error grabbing from --webcam=" << FLAGS_webcam
                   << std::endl;
       } else {
         time_point capture_time = now();
-        if (!capture.retrieve(image)) {
+        if (!capture->retrieve(&image)) {
           std::cerr << "error retrieving from --webcam=" << FLAGS_webcam
                     << std::endl;
         }
@@ -356,8 +351,12 @@ int main(int argc, char **argv) {
     robot.reset(new NoOpRobot());
   }
   Recognizer recognizer(robot.get());
-  if (argc == 1) {
-    DetectWebcam(&recognizer);
+  if (FLAGS_raspicam) {
+    RaspiCamCaptureSource raspicam(kImageSize.x, kImageSize.y);
+    DetectWebcam(&raspicam, &recognizer);
+  } else if (argc == 1) {
+    WebcamCaptureSource webcam(FLAGS_webcam, kImageSize.x, kImageSize.y);
+    DetectWebcam(&webcam, &recognizer);
   } else {
     DetectImages(&recognizer, argc - 1, argv + 1);
   }

@@ -7,3 +7,6 @@
 [submodule "cc/gflags"]
 	path = cc/gflags
 	url = https://github.com/gflags/gflags.git
+[submodule "cc/raspicam"]
+	path = cc/raspicam
+	url = https://github.com/cedricve/raspicam.git

@@ -1,3 +1,6 @@
+#ifndef __KAMIKAZE_LOGGING_H__
+#define __KAMIKAZE_LOGGING_H__
+
 #include <iostream>
 
 struct NoAssertHelper {};
@@ -18,3 +21,4 @@ const AssertHelper &operator<<(const AssertHelper &helper, T &&msg) {
   ((cond)) ? NoAssertHelper() : AssertHelper() << __FILE__ << ":" << __LINE__  \
                                                << ": " << #cond << " "
 
+#endif
