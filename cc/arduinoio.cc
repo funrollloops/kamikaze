@@ -46,11 +46,10 @@ public:
       : port(port), timer(port.get_io_service()),
         error(true) {}
 
-  // Reads a character or times out
-  // returns false if the read times out
+  // Reads a character or times out. val is not modified unless the function
+  // returns true.  returns false if the read times out.
   bool read_char(char &val, boost::posix_time::time_duration timeout) {
     std::unique_lock<std::mutex> lock(mutex_);
-    val = c = '\0';
     port.get_io_service().reset();
     std::size_t bytes_read;
     boost::asio::async_read(
@@ -115,16 +114,18 @@ enum class State : char {
   UNKNOWN = 0,
 };
 
-State GetState(boost::asio::serial_port &port) {
-  char c;
+State GetLatestState(boost::asio::serial_port &port) {
+  char c = 0;
   port_wrapper reader(port);
-  if (!reader.read_char(c, boost::posix_time::seconds(1)))
-    return State::UNKNOWN;
-  return c == char(State::READY) ? State::READY : State::ERROR;
+  while (reader.read_char(c, boost::posix_time::seconds(c ? 0 : 1)) || !c) {
+    if (c != char(State::READY) && c != char(State::ERROR))
+      c = 0;
+  }
+  return State(c);
 }
 
 void WaitReadyForever(boost::asio::serial_port& port) {
-  while (GetState(port) != State::READY)
+  while (GetLatestState(port) != State::READY)
     std::cerr << "error: waiting for ready" << std::endl;
 }
 
@@ -170,7 +171,7 @@ void ArduinoIO::SendMessage(std::string command) {
       WaitReadyForever(serial_port_);
       continue;
     }
-    if (GetState(serial_port_) == State::READY) {
+    if (GetLatestState(serial_port_) == State::READY) {
       break;
     }
     WaitReadyForever(serial_port_);
