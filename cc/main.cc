@@ -231,6 +231,8 @@ public:
       cv::putText(input_img, line2.str(), cv::Point(0, 40),
                   cv::FONT_HERSHEY_PLAIN, 2, kWhite);
       cv::imshow("img", input_img);
+    } else {
+      std::cout << line1.str() << "\t" << line2.str() << std::endl;
     }
   }
 
