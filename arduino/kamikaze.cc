@@ -73,13 +73,13 @@ void exec_command(char *buf, size_t len) {
       else Serial.println(stepper2.tell());
       break;
     }
-    case 'p': {
+    case 't': {
       PosPair pos{stepper1.tell(), stepper2.tell()};
       Serial.write(reinterpret_cast<const uint8_t*>(&pos), sizeof(pos));
       Serial.print('\n');
       break;
     }
-    case 'P': {
+    case 'm': {
       if (len == sizeof(PosPair) + 1) {
         auto *arg = reinterpret_cast<const PosPair*>(buf + 1);
         stepper1.moveTo(arg->first);
