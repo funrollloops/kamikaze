@@ -22,14 +22,14 @@ int main(int argc, char *argv[]) {
   while (true) {
     TELL();
     robot.fire(std::chrono::milliseconds(500));
-    robot.moveTo({-2048, 2048});
+    robot.moveTo({-500, 1024});
     TELL();
     sleep_ms(500);
     TELL();
-    robot.moveTo({2048, 2048});
+    robot.moveTo({500, 1024});
     sleep_ms(2500);
     TELL();
-    robot.moveTo({300, -568});
+    robot.moveTo({200, -568});
     sleep_ms(5000);
   }
   return 0;
