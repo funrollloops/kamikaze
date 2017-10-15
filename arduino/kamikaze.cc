@@ -12,7 +12,25 @@
 
 #define TIMER1_INITIAL (UINT16_MAX - (16ul * 1000 * 1000)/256/(1000))
 
-OutputPin<13> led;
+template <typename Pin>
+class TimedOutput {
+ public:
+  void tick() {
+    if (ticks_ == 0) return;
+    if (--ticks_ == 0) pin_ = false;
+  }
+
+  void set_ticks(uint16_t ticks) {
+    if (ticks > 0) pin_ = true;
+    ticks_ = ticks;
+  }
+
+ private:
+  Pin pin_;
+  volatile uint16_t ticks_ = 0;
+};
+
+TimedOutput<OutputPin<13>> led;
 StepperController<StepperBYJ48<4, 6, 5, 7>> stepper1;
 StepperController<StepperBYJ48<9, 11, 8, 10>> stepper2;
 
@@ -35,10 +53,10 @@ void setup() {
 
 bool received_command = false;
 
-bool parseInt(char *buf, size_t len, int16_t* value) {
+bool parseInt(const char *buf, size_t len, int16_t* value) {
   if (len == 0) return false;
   bool pos = true;
-  char *p = buf;
+  const char *p = buf;
   if (len > 1 && buf[0] == '-') {
     ++p;
     pos = false;
@@ -57,51 +75,64 @@ bool parseInt(char *buf, size_t len, int16_t* value) {
   return true;
 }
 
-void exec_command(char *buf, size_t len) {
-  struct PosPair { int16_t first, second; };
+bool exec_command(char *buf, size_t len) {
+  struct __attribute__((packed)) PosPair { int16_t first, second; };
+  struct __attribute__((packed)) Command {
+    char hdr;
+    union {
+      char str[1];
+      PosPair pos_pair;
+      uint16_t u16;
+    };
+  };
   int16_t arg;
   received_command = true;
-  if (len < 1) return;
-  switch (buf[0]) {
-    case 'h': {
-      if (parseInt(buf + 1, len - 1, &arg)) stepper1.moveTo(arg);
+  if (len < 1) return false;
+  const Command *cmd = reinterpret_cast<const Command*>(buf);
+  switch (cmd->hdr) {
+    case 'h':
+      if (parseInt(cmd->str, len - 1, &arg)) stepper1.moveTo(arg);
       else Serial.println(stepper1.tell());
-      break;
-    }
-    case 'v': {
-      if (parseInt(buf + 1, len - 1, &arg)) stepper2.moveTo(arg);
+      return true;
+    case 'v':
+      if (parseInt(cmd->str, len - 1, &arg)) stepper2.moveTo(arg);
       else Serial.println(stepper2.tell());
-      break;
-    }
+      return true;
     case 't': {
       PosPair pos{stepper1.tell(), stepper2.tell()};
       Serial.write(reinterpret_cast<const uint8_t*>(&pos), sizeof(pos));
       Serial.print('\n');
-      break;
+      return true;
     }
-    case 'm': {
-      if (len == sizeof(PosPair) + 1) {
-        auto *arg = reinterpret_cast<const PosPair*>(buf + 1);
-        stepper1.moveTo(arg->first);
-        stepper2.moveTo(arg->second);
-        break;
-      }
-      // FALLTHROUGH_INTENDED;
-    }
-    default:
-      Serial.print("unknown command: ");
-      Serial.write((const uint8_t*) buf, len);
-      Serial.print('\n');
+    case 'm':
+      if (len != sizeof(PosPair) + 1) return false;
+      stepper1.moveTo(cmd->pos_pair.first);
+      stepper2.moveTo(cmd->pos_pair.second);
+      return true;
+    case 'f':
+      if (len != sizeof(uint16_t) + 1) return false;
+      led.set_ticks(cmd->u16);
+      return true;
   }
+  return false;
 }
 
 void serialEvent() {
-  static char buffer[6];
+  static char buffer[7];
   static size_t received = 0;
   while (Serial.available()) {
     int byte = Serial.read();
-    if (byte == '\n' || received == sizeof(buffer)) {
-      exec_command(buffer, received);
+    if (byte == '\n') {
+      if (!exec_command(buffer, received)) {
+        Serial.print("unknown command: ");
+        Serial.write((const uint8_t*) buffer, received);
+        Serial.print('\n');
+      }
+      received = 0;
+    } else if (received == sizeof(buffer)) {
+      Serial.print("command too long: ");
+      Serial.write((const uint8_t*) buffer, received);
+      Serial.print('\n');
       received = 0;
     } else {
       buffer[received++] = byte;
@@ -109,27 +140,4 @@ void serialEvent() {
   }
 }
 
-
-void test_steppers() {
-  Serial.write("test loop");
-  const uint16_t home = stepper1.tell();
-  while(!Serial.available()) {
-    led = 0;
-    stepper1.moveTo(home - 4096);
-    stepper2.moveTo(home + 2048);
-    stepper1.wait(); stepper2.wait();
-    led = 1;
-    stepper1.moveTo(home);
-    stepper2.moveTo(home);
-    stepper1.wait(); stepper2.wait();
-    for (int i = 0; i < 20; ++i) {
-      led = i & 1;
-      delay(2000 / 20);
-    }
-  }
-  while(true) serialEvent();
-}
-
-void loop() {
-  //serialEvent();
-}
+void loop() { }

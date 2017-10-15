@@ -1,23 +1,36 @@
 #include "robot.h"
 #include "logging.h"
 
+#include <chrono>
 #include <iostream>
 #include <string>
+#include <thread>
+
+void sleep_ms(int ms) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+std::ostream &operator<<(std::ostream &os, Robot::Pos pos) {
+  return os << pos.first << "," << pos.second;
+}
 
 int main(int argc, char *argv[]) {
   QCHECK(argc > 1) << ": usage: " << argv[0] << " /dev/ttyACM0\n";
 
   RobotSerial robot(argv[1], 9600);
+#define TELL() std::cout << "pos=" << robot.tell() << std::endl
   while (true) {
+    TELL();
     robot.fire(std::chrono::milliseconds(500));
-    usleep(100);
-    robot.left(100);
-    usleep(100);
-    robot.right(100);
-    usleep(100);
-    robot.up(100);
-    usleep(100);
-    robot.down(100);
+    robot.moveTo({-2048, 2048});
+    TELL();
+    sleep_ms(500);
+    TELL();
+    robot.moveTo({2048, 2048});
+    sleep_ms(2500);
+    TELL();
+    robot.moveTo({300, -568});
+    sleep_ms(5000);
   }
   return 0;
 }

@@ -5,21 +5,6 @@
 
 namespace {
 
-struct AsBytes {
-  AsBytes(const std::string& s) : s(s) {}
-  const std::string& s;
-};
-
-std::ostream& operator<<(std::ostream& os, const AsBytes& b) {
-  for (char c : b.s) {
-    if (isprint(c))
-      os << c;
-    else
-      os << '\\' << uint16_t(uint8_t(c));
-  }
-  return os << std::endl;
-}
-
 std::string Encode(const std::string &command) {
   const char address = 0;
   const char addr_size = 1;
@@ -130,6 +115,16 @@ void WaitReadyForever(boost::asio::serial_port& port) {
 
 } // namespace
 
+std::ostream& operator<<(std::ostream& os, const AsBytes& b) {
+  for (char c : b.s) {
+    if (isprint(c))
+      os << c;
+    else
+      os << '\\' << uint16_t(uint8_t(c));
+  }
+  return os;
+}
+
 ArduinoIO::ArduinoIO(const std::string &port, int baud_rate) {
   serial_port_.open(port);
   serial_port_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
@@ -183,4 +178,34 @@ void ArduinoIO::WriteOutput(Pin pin, bool value) {
   command.insert(command.end(), pin);
   command.insert(command.end(), value? 1 : 0);
   SendMessage(command);
+}
+
+ArduinoSerialLineIO::ArduinoSerialLineIO(const std::string &port, int baud_rate) {
+  serial_port_.open(port);
+  serial_port_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
+}
+
+void ArduinoSerialLineIO::ClearReadBuffer() {
+  port_wrapper reader{serial_port_};
+  char byte;
+  while (reader.read_char(byte, boost::posix_time::milliseconds(0))) { }
+}
+
+bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
+  std::string command(cmd, len);
+  std::cerr << "SendLine(" << AsBytes(command) << ")" << std::endl;
+  command += "\n";
+  port_wrapper writer{serial_port_};
+  return writer.write_msg(command, boost::posix_time::milliseconds(100));
+}
+
+std::string ArduinoSerialLineIO::ReadLine() {
+  std::string line;
+  port_wrapper reader{serial_port_};
+  char byte;
+  while (reader.read_char(byte, boost::posix_time::milliseconds(10))) {
+    if (byte == '\n') return line;
+    line.append(1, byte);
+  }
+  return line;
 }

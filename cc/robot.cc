@@ -1,60 +1,34 @@
 #include "robot.h"
 
-RobotSerial::RobotSerial(const std::string &tty, int baud) : io_(tty, baud) {
-  valve(false);
-
-  LR_.cmd.dir_pin = 3;
-  LR_.cmd.pulse_pin = 2;
-  LR_.cmd.pos_trigger_pin = 6;
-  LR_.cmd.neg_trigger_pin = ArduinoIO::kUnconnected3;
-  LR_.cmd.forward = true;
-  LR_.cmd.steps = 100;
-  LR_.ms1 = 14;
-  LR_.ms2 = 15;
-  LR_.ms3 = 16;
-
-  UD_.cmd.dir_pin = 4;
-  UD_.cmd.pulse_pin = 5;
-  UD_.cmd.pos_trigger_pin = ArduinoIO::kUnconnected3;
-  UD_.cmd.neg_trigger_pin = 7;
-  UD_.cmd.forward = true;
-  UD_.cmd.steps = 100;
-  UD_.ms1 = 8;
-  UD_.ms2 = 9;
-  UD_.ms3 = 10;
-
-  LR_.SetSpeed(Motor::SIXTEENTH);
-  UD_.SetSpeed(Motor::SIXTEENTH);
-}
+RobotSerial::RobotSerial(const std::string &tty, int baud) : io_(tty, baud) {}
 
 RobotSerial::~RobotSerial() {}
 
-PythonProxyRobot::PythonProxyRobot(const std::string &tty, int baud)
-    : io_(tty, baud) {
-  valve(false);
-
-  LR_.cmd.dir_pin = 3;
-  LR_.cmd.pulse_pin = 2;
-  LR_.cmd.pos_trigger_pin = 6;
-  LR_.cmd.neg_trigger_pin = ArduinoIO::kUnconnected3;
-  LR_.cmd.forward = true;
-  LR_.cmd.steps = 100;
-  LR_.ms1 = 14;
-  LR_.ms2 = 15;
-  LR_.ms3 = 16;
-
-  UD_.cmd.dir_pin = 4;
-  UD_.cmd.pulse_pin = 5;
-  UD_.cmd.pos_trigger_pin = ArduinoIO::kUnconnected3;
-  UD_.cmd.neg_trigger_pin = 7;
-  UD_.cmd.forward = true;
-  UD_.cmd.steps = 100;
-  UD_.ms1 = 8;
-  UD_.ms2 = 9;
-  UD_.ms3 = 10;
-
-  LR_.SetSpeed(Motor::SIXTEENTH);
-  UD_.SetSpeed(Motor::SIXTEENTH);
+std::pair<int16_t, int16_t> RobotSerial::tell() {
+  std::string response;
+  do {
+    if (!response.empty()) {
+      std::cerr << "warning: bad response to tell() cmd: " << AsBytes(response);
+    }
+    io_.ClearReadBuffer();
+    io_.SendLine("t", 1);
+    response = io_.ReadLine();
+  } while (response.size() != sizeof(Pos));
+  return *reinterpret_cast<const Pos*>(response.data());
 }
 
-PythonProxyRobot::~PythonProxyRobot() {}
+void RobotSerial::moveTo(Pos pos) {
+  struct __attribute__((packed)) {
+    char h;
+    int16_t first, second;
+  } cmd{'m', pos.first, pos.second};
+  io_.SendLine(reinterpret_cast<const char*>(&cmd), sizeof(cmd));
+}
+
+void RobotSerial::fire(std::chrono::milliseconds time) {
+  struct __attribute__((packed)) {
+    char h;
+    uint16_t ms;
+  } cmd{'f', static_cast<uint16_t>(time / std::chrono::milliseconds(1))};
+  io_.SendLine(reinterpret_cast<const char*>(&cmd), sizeof(cmd));
+}
