@@ -13,10 +13,6 @@
 #include "operators.h"
 #include "robot.h"
 
-//#define USE_CUDA 1
-#ifdef USE_CUDA
-#include <opencv2/cudaobjdetect.hpp>
-#endif
 #include <opencv2/opencv.hpp>
 
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
@@ -86,17 +82,11 @@ std::ostream &operator<<(std::ostream &os, Action action) {
 
 class Recognizer {
 public:
-#ifdef USE_CUDA
-  using Mat = cv::cuda::GpuMat;
-#else
   using Mat = cv::Mat;
-#endif
 
   Recognizer(Robot *robot) : robot_(robot) {
-#ifndef USE_CUDA
     QCHECK(face_detector_->load(kFaceCascadeFile))
         << " error loading " << kFaceCascadeFile;
-#endif
   }
 
   static void PlotFeature(cv::Mat &mat, const cv::Rect &feature,
@@ -161,23 +151,6 @@ public:
     return actions;
   }
 
-#ifdef USE_CUDA
-  std::vector<cv::Rect> DetectMultiScale(cv::cuda::CascadeClassifier *cc,
-                                         const cv::cuda::GpuMat &mat,
-                                         double scale_factor = 1.3,
-                                         int min_neighbors = 3,
-                                         cv::Size min_size = {0, 0}) {
-    std::vector<cv::Rect> rects;
-    cv::cuda::GpuMat found;
-    cc->setScaleFactor(scale_factor);
-    cc->setMinNeighbors(min_neighbors);
-    cc->setMinObjectSize(min_size);
-    cc->detectMultiScale(mat, found);
-    cc->convert(found, rects);
-    return rects;
-  }
-#endif
-
   std::vector<cv::Rect> DetectMultiScale(cv::CascadeClassifier *cc,
                                          const cv::Mat &mat,
                                          double scale_factor = 1.3,
@@ -233,13 +206,8 @@ private:
   Robot *robot_;
   time_point last_action_;
   time_point last_fire_;
-#ifdef USE_CUDA
-  cv::Ptr<cv::cuda::CascadeClassifier> face_detector_ =
-      cv::cuda::CascadeClassifier::create(kFaceCascadeFile);
-#else
   std::unique_ptr<cv::CascadeClassifier> face_detector_{
       new cv::CascadeClassifier};
-#endif
 };
 
 void DetectImages(Recognizer *recognizer, int argc, char **argv) {
