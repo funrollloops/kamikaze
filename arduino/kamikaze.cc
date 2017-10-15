@@ -51,8 +51,6 @@ void setup() {
   Serial.begin(9600);
 }
 
-bool received_command = false;
-
 bool parseInt(const char *buf, size_t len, int16_t* value) {
   if (len == 0) return false;
   bool pos = true;
@@ -80,13 +78,13 @@ bool exec_command(char *buf, size_t len) {
   struct __attribute__((packed)) Command {
     char hdr;
     union {
-      char str[1];
+      char str[6];
       PosPair pos_pair;
       uint16_t u16;
     };
   };
   int16_t arg;
-  received_command = true;
+  if (len == 0) return true;  // Ignore empty commands.
   if (len < 1) return false;
   const Command *cmd = reinterpret_cast<const Command*>(buf);
   switch (cmd->hdr) {
@@ -118,7 +116,7 @@ bool exec_command(char *buf, size_t len) {
 }
 
 void serialEvent() {
-  static char buffer[7];
+  static char buffer[8];
   static size_t received = 0;
   while (Serial.available()) {
     int byte = Serial.read();
