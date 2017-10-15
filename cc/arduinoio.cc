@@ -186,17 +186,22 @@ ArduinoSerialLineIO::ArduinoSerialLineIO(const std::string &port, int baud_rate)
 }
 
 void ArduinoSerialLineIO::ClearReadBuffer() {
+  tcflush(serial_port_.lowest_layer().native_handle(), TCIFLUSH);
   port_wrapper reader{serial_port_};
   char byte;
-  while (reader.read_char(byte, boost::posix_time::milliseconds(0))) { }
+  while (reader.read_char(byte, boost::posix_time::milliseconds(1))) { }
 }
 
 bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
   std::string command(cmd, len);
-  std::cerr << "SendLine(" << AsBytes(command) << ")" << std::endl;
+  std::cout << "SendLine(" << AsBytes(command) << ")" << std::endl;
   command += "\n";
   port_wrapper writer{serial_port_};
-  return writer.write_msg(command, boost::posix_time::milliseconds(100));
+  if (writer.write_msg(command, boost::posix_time::milliseconds(100))) {
+    tcflush(serial_port_.lowest_layer().native_handle(), TCOFLUSH);
+    return true;
+  }
+  return false;
 }
 
 std::string ArduinoSerialLineIO::ReadLine() {
