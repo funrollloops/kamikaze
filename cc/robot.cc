@@ -6,14 +6,15 @@ RobotSerial::~RobotSerial() {}
 
 std::pair<int16_t, int16_t> RobotSerial::tell() {
   std::string response;
-  do {
+  for (; response.size() != sizeof(Pos);
+       std::this_thread::sleep_for(std::chrono::milliseconds(1))) {
     if (!response.empty()) {
-      std::cerr << "warning: bad response to tell() cmd: " << AsBytes(response);
+      std::cerr << "warning: bad response to tell() cmd: " << AsBytes(response) << std::endl;
     }
     io_.ClearReadBuffer();
     io_.SendLine("t", 1);
     response = io_.ReadLine();
-  } while (response.size() != sizeof(Pos));
+  }
   return *reinterpret_cast<const Pos*>(response.data());
 }
 
