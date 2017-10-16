@@ -208,7 +208,7 @@ std::string ArduinoSerialLineIO::ReadLine() {
   std::string line;
   port_wrapper reader{serial_port_};
   char byte;
-  while (reader.read_char(byte, boost::posix_time::milliseconds(10))) {
+  while (reader.read_char(byte, boost::posix_time::milliseconds(50))) {
     if (byte == '\n') return line;
     line.append(1, byte);
   }
