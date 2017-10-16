@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 #define TELL() std::cout << "pos=" << robot.tell() << std::endl
   while (true) {
     TELL();
-    robot.fire(std::chrono::milliseconds(500));
+    robot.fire(std::chrono::milliseconds(1500));
     robot.moveTo({-500, 1024});
     TELL();
     sleep_ms(500);

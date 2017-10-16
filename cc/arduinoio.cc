@@ -185,9 +185,9 @@ ArduinoSerialLineIO::ArduinoSerialLineIO(const std::string &port, int baud_rate)
   serial_port_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
 }
 
-void ArduinoSerialLineIO::ClearReadBuffer() {
-  tcflush(serial_port_.lowest_layer().native_handle(), TCIFLUSH);
+void ArduinoSerialLineIO::ClearReadBufferLocked() {
   port_wrapper reader{serial_port_};
+  tcflush(serial_port_.lowest_layer().native_handle(), TCIFLUSH);
   char byte;
   while (reader.read_char(byte, boost::posix_time::milliseconds(1))) { }
 }
@@ -196,6 +196,11 @@ bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
   std::string command(cmd, len);
   std::cout << "SendLine(" << AsBytes(command) << ")" << std::endl;
   command += "\n";
+  std::unique_lock<std::mutex> lock(mu_);
+  return SendBytesLocked(command);
+}
+
+bool ArduinoSerialLineIO::SendBytesLocked(const std::string& command) {
   port_wrapper writer{serial_port_};
   if (writer.write_msg(command, boost::posix_time::milliseconds(100))) {
     tcflush(serial_port_.lowest_layer().native_handle(), TCOFLUSH);
@@ -204,7 +209,26 @@ bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
   return false;
 }
 
+bool ArduinoSerialLineIO::SendAndRead(const char *cmd, std::size_t len, std::string* response) {
+  response->clear();
+  std::string command(cmd, len);
+  std::cout << "SendAndRead(" << AsBytes(command) << ")" << std::endl;
+  command += "\n";
+  std::unique_lock<std::mutex> lock(mu_);
+  ClearReadBufferLocked();
+  if (!SendBytesLocked(command)) {
+    return false;
+  }
+  *response = ReadLineLocked();
+  return true;
+}
+
 std::string ArduinoSerialLineIO::ReadLine() {
+  std::unique_lock<std::mutex> lock(mu_);
+  return ReadLineLocked();
+}
+
+std::string ArduinoSerialLineIO::ReadLineLocked() {
   std::string line;
   port_wrapper reader{serial_port_};
   char byte;

@@ -15,6 +15,8 @@
 template <typename Pin>
 class TimedOutput {
  public:
+  TimedOutput() { pin_ = false; }
+
   void tick() {
     if (ticks_ == 0) return;
     if (--ticks_ == 0) pin_ = false;
@@ -38,6 +40,7 @@ ISR(TIMER1_OVF_vect) {
   TCNT1 = TIMER1_INITIAL;
   stepper1.tick();
   stepper2.tick();
+  led.tick();
 }
 
 void setup() {

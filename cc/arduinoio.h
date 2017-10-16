@@ -95,11 +95,16 @@ struct Motor {
 class ArduinoSerialLineIO {
  public:
   ArduinoSerialLineIO(const std::string &port, int baud_rate);
-  void ClearReadBuffer();
   bool SendLine(const char *cmd, std::size_t len);
+  bool SendAndRead(const char *cmd, std::size_t len, std::string* response);
   std::string ReadLine();
 
  private:
+  void ClearReadBufferLocked();
+  std::string ReadLineLocked();
+  bool SendBytesLocked(const std::string& command);
+
+  std::mutex mu_;
   boost::asio::io_service io_;
   boost::asio::serial_port serial_port_{io_};
 };
