@@ -212,14 +212,16 @@ bool ArduinoSerialLineIO::SendBytesLocked(const std::string& command) {
 bool ArduinoSerialLineIO::SendAndRead(const char *cmd, std::size_t len, std::string* response) {
   response->clear();
   std::string command(cmd, len);
-  std::cout << "SendAndRead(" << AsBytes(command) << ")" << std::endl;
+  std::cout << "SendAndRead(" << AsBytes(command) << ")";
   command += "\n";
   std::unique_lock<std::mutex> lock(mu_);
   ClearReadBufferLocked();
   if (!SendBytesLocked(command)) {
+    std::cout << ": send failed" << std::endl;
     return false;
   }
   *response = ReadLineLocked();
+  std::cout << ": " << AsBytes(*response) << std::endl;
   return true;
 }
 
