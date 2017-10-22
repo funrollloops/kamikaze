@@ -9,6 +9,7 @@
 
 #include <gflags/gflags.h>
 
+#include "capture.h"
 #include "logging.h"
 #include "operators.h"
 #include "robot.h"
@@ -18,12 +19,17 @@
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
+DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
+DEFINE_bool(
+    wait_between_images, true,
+    "When doing detection on images, set to true to wait after each image.");
+DEFINE_bool(preview, true, "Enable preview window.");
 
 constexpr char kFaceCascadeFile[] =
     "../haarcascades/haarcascade_frontalface_default.xml";
 constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
 constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
-static const cv::Size kMinFaceSize(20, 20);
+static const cv::Size kMinFaceSize(100, 100);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
 static const int kMinConsecutiveOnTargetToFire = 10;
@@ -91,7 +97,9 @@ public:
 
   static void PlotFeature(cv::Mat &mat, const cv::Rect &feature,
                           const cv::Scalar &color) {
-    cv::rectangle(mat, feature.tl(), feature.br(), color);
+    if (FLAGS_preview) {
+      cv::rectangle(mat, feature.tl(), feature.br(), color);
+    }
   }
 
   static cv::Rect GuessMouthLocation(const cv::Rect &face) {
@@ -190,11 +198,15 @@ public:
     line1 << "latency "
           << ((last_action_ - timestamp) / std::chrono::milliseconds(1))
           << " ms";
-    cv::putText(input_img, line1.str(), cv::Point(0, 20),
-                cv::FONT_HERSHEY_PLAIN, 1, kWhite);
-    cv::putText(input_img, line2.str(), cv::Point(0, 40),
-                cv::FONT_HERSHEY_PLAIN, 2, kWhite);
-    cv::imshow("img", input_img);
+    if (FLAGS_preview) {
+      cv::putText(input_img, line1.str(), cv::Point(0, 20),
+                  cv::FONT_HERSHEY_PLAIN, 1, kWhite);
+      cv::putText(input_img, line2.str(), cv::Point(0, 40),
+                  cv::FONT_HERSHEY_PLAIN, 2, kWhite);
+      cv::imshow("img", input_img);
+    } else {
+      std::cout << line1.str() << "\t" << line2.str() << std::endl;
+    }
   }
 
   Robot *robot() { return robot_; }
@@ -225,13 +237,16 @@ void DetectImages(Recognizer *recognizer, int argc, char **argv) {
       std::cerr << "error reading image " << argv[i] << std::endl;
       continue;
     }
-    recognizer->Detect(now(), recognizer->robot()->tell(), image);
-    if (cv::waitKey(0) == 'q')
+    auto start = now();
+    recognizer->Detect(start, recognizer->robot()->tell(), image);
+    auto latency_ms = (now() - start) / std::chrono::milliseconds(1);
+    std::cout << "latency: " << latency_ms << " ms" << std::endl;
+    if (cv::waitKey(FLAGS_wait_between_images ? 0 : 1) == 'q')
       break;
   }
 }
 
-void DetectWebcam(Robot* robot, Recognizer *recognizer) {
+void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) {
   std::mutex mu;
   std::condition_variable latest_image_cv;
   LatestImage latest_image;
@@ -239,21 +254,15 @@ void DetectWebcam(Robot* robot, Recognizer *recognizer) {
   bool latest_image_ready = false;
 
   std::thread capture_thread([&] {
-    cv::VideoCapture capture{FLAGS_webcam};
-    // A return value of false doesn't mean the prop set failed!
-    capture.set(cv::CAP_PROP_FPS, 30);
-    capture.set(cv::CAP_PROP_FRAME_WIDTH, kImageSize.x);
-    capture.set(cv::CAP_PROP_FRAME_HEIGHT, kImageSize.y);
-    QCHECK(capture.isOpened()) << "Failed to open --webcam=" << FLAGS_webcam;
     while (!done.load(std::memory_order_relaxed)) {
       cv::Mat image;
-      if (!capture.grab()) {  // Defer decoding until after we calculate the timestamp.
+      if (!capture->grab()) {  // Defer decoding until after we calculate the timestamp.
         std::cerr << "error grabbing from --webcam=" << FLAGS_webcam
                   << std::endl;
       } else {
         time_point capture_time = now();
         auto pos = robot->tell();
-        if (!capture.retrieve(image)) {
+        if (!capture->retrieve(&image)) {
           std::cerr << "error retrieving from --webcam=" << FLAGS_webcam
                     << std::endl;
         }
@@ -319,8 +328,12 @@ int main(int argc, char **argv) {
     robot.reset(new NoOpRobot());
   }
   Recognizer recognizer(robot.get());
-  if (argc == 1) {
-    DetectWebcam(robot.get(), &recognizer);
+  if (FLAGS_raspicam) {
+    RaspiCamCaptureSource raspicam(kImageSize.x, kImageSize.y);
+    DetectWebcam(&raspicam, &recognizer, robot.get());
+  } else if (argc == 1) {
+    WebcamCaptureSource webcam(FLAGS_webcam, kImageSize.x, kImageSize.y);
+    DetectWebcam(&webcam, &recognizer, robot.get());
   } else {
     DetectImages(&recognizer, argc - 1, argv + 1);
   }
