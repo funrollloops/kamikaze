@@ -13,10 +13,6 @@
 #include "operators.h"
 #include "robot.h"
 
-//#define USE_CUDA 1
-#ifdef USE_CUDA
-#include <opencv2/cudaobjdetect.hpp>
-#endif
 #include <opencv2/opencv.hpp>
 
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
@@ -41,7 +37,7 @@ static const cv::Scalar kTeal(255, 255, 0);
 static const cv::Scalar kYellow(0, 255, 255);
 static const cv::Scalar kWhite(255, 255, 255);
 
-static const cv::Point kImageSize(1920, 1080);
+static const cv::Point kImageSize(1280, 720);
 static const cv::Point kTarget = kImageSize / 2;
 static const cv::Point kFovInSteps(200, 100);
 static const int kTargetSize = 20;
@@ -60,19 +56,19 @@ struct Action {
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
 time_point now() { return std::chrono::high_resolution_clock::now(); }
 
-void DoAction(Action action, Robot *robot) {
+void DoAction(Action action, Robot::Pos pos, Robot *robot) {
   switch (action.cmd) {
   case Action::LEFT:
-    robot->left(action.steps);
+    robot->moveTo({pos.first - action.steps, pos.second});
     return;
   case Action::RIGHT:
-    robot->right(action.steps);
+    robot->moveTo({pos.first + action.steps, pos.second});
     return;
   case Action::DOWN:
-    robot->down(action.steps);
+    robot->moveTo({pos.first, pos.second - action.steps});
     return;
   case Action::UP:
-    robot->up(action.steps);
+    robot->moveTo({pos.first, pos.second + action.steps});
     return;
   case Action::FIRE:
     robot->fire(kFireTime);
@@ -86,17 +82,11 @@ std::ostream &operator<<(std::ostream &os, Action action) {
 
 class Recognizer {
 public:
-#ifdef USE_CUDA
-  using Mat = cv::cuda::GpuMat;
-#else
   using Mat = cv::Mat;
-#endif
 
   Recognizer(Robot *robot) : robot_(robot) {
-#ifndef USE_CUDA
     QCHECK(face_detector_->load(kFaceCascadeFile))
         << " error loading " << kFaceCascadeFile;
-#endif
   }
 
   static void PlotFeature(cv::Mat &mat, const cv::Rect &feature,
@@ -161,23 +151,6 @@ public:
     return actions;
   }
 
-#ifdef USE_CUDA
-  std::vector<cv::Rect> DetectMultiScale(cv::cuda::CascadeClassifier *cc,
-                                         const cv::cuda::GpuMat &mat,
-                                         double scale_factor = 1.3,
-                                         int min_neighbors = 3,
-                                         cv::Size min_size = {0, 0}) {
-    std::vector<cv::Rect> rects;
-    cv::cuda::GpuMat found;
-    cc->setScaleFactor(scale_factor);
-    cc->setMinNeighbors(min_neighbors);
-    cc->setMinObjectSize(min_size);
-    cc->detectMultiScale(mat, found);
-    cc->convert(found, rects);
-    return rects;
-  }
-#endif
-
   std::vector<cv::Rect> DetectMultiScale(cv::CascadeClassifier *cc,
                                          const cv::Mat &mat,
                                          double scale_factor = 1.3,
@@ -189,7 +162,7 @@ public:
     return rects;
   }
 
-  void Detect(time_point timestamp, cv::Mat &input_img) {
+  void Detect(time_point timestamp, Robot::Pos pos, cv::Mat &input_img) {
     if (timestamp - last_action_ <=  std::chrono::milliseconds(10)) {
       return;
     }
@@ -206,7 +179,7 @@ public:
       cv::Rect mouth = GuessMouthLocation(face);
       PlotFeature(input_img, mouth, kYellow);
       for (Action action : DetermineAction(input_img, Center(mouth))) {
-        DoAction(action, robot_);
+        DoAction(action, pos, robot_);
         line2 << action << " ";
       }
       if (maybe_fire_ > 0) {
@@ -233,13 +206,14 @@ private:
   Robot *robot_;
   time_point last_action_;
   time_point last_fire_;
-#ifdef USE_CUDA
-  cv::Ptr<cv::cuda::CascadeClassifier> face_detector_ =
-      cv::cuda::CascadeClassifier::create(kFaceCascadeFile);
-#else
   std::unique_ptr<cv::CascadeClassifier> face_detector_{
       new cv::CascadeClassifier};
-#endif
+};
+
+struct LatestImage {
+  time_point timestamp;
+  Robot::Pos pos;
+  cv::Mat image;
 };
 
 void DetectImages(Recognizer *recognizer, int argc, char **argv) {
@@ -251,27 +225,26 @@ void DetectImages(Recognizer *recognizer, int argc, char **argv) {
       std::cerr << "error reading image " << argv[i] << std::endl;
       continue;
     }
-    recognizer->Detect(now(), image);
+    recognizer->Detect(now(), recognizer->robot()->tell(), image);
     if (cv::waitKey(0) == 'q')
       break;
   }
 }
 
-void DetectWebcam(Recognizer *recognizer) {
+void DetectWebcam(Robot* robot, Recognizer *recognizer) {
   std::mutex mu;
   std::condition_variable latest_image_cv;
-  std::pair<time_point, cv::Mat> latest_image;
+  LatestImage latest_image;
   std::atomic<bool> done(false);
   bool latest_image_ready = false;
 
   std::thread capture_thread([&] {
     cv::VideoCapture capture{FLAGS_webcam};
-    QCHECK(capture.isOpened()) << "Failed to open --webcam=" << FLAGS_webcam;
     // A return value of false doesn't mean the prop set failed!
-    QCHECK(capture.set(cv::CAP_PROP_FRAME_WIDTH, kImageSize.x) || true)
-        << " tried to set width to " << kImageSize.x;
-    QCHECK(capture.set(cv::CAP_PROP_FRAME_HEIGHT, kImageSize.y) || true)
-        << " tried to set height to " << kImageSize.y;
+    capture.set(cv::CAP_PROP_FPS, 30);
+    capture.set(cv::CAP_PROP_FRAME_WIDTH, kImageSize.x);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT, kImageSize.y);
+    QCHECK(capture.isOpened()) << "Failed to open --webcam=" << FLAGS_webcam;
     while (!done.load(std::memory_order_relaxed)) {
       cv::Mat image;
       if (!capture.grab()) {  // Defer decoding until after we calculate the timestamp.
@@ -279,13 +252,15 @@ void DetectWebcam(Recognizer *recognizer) {
                   << std::endl;
       } else {
         time_point capture_time = now();
+        auto pos = robot->tell();
         if (!capture.retrieve(image)) {
           std::cerr << "error retrieving from --webcam=" << FLAGS_webcam
                     << std::endl;
         }
         std::unique_lock<std::mutex> lock(mu);
-        latest_image.first = capture_time;
-        latest_image.second = image;
+        latest_image.timestamp = capture_time;
+        latest_image.pos = pos;
+        latest_image.image = image;
         latest_image_ready = true;
         lock.unlock();
         latest_image_cv.notify_one();
@@ -294,35 +269,34 @@ void DetectWebcam(Recognizer *recognizer) {
   });
 
   std::thread detect_thread([&] {
-    time_point timestamp;
-    cv::Mat image;
+    LatestImage latest;
     for (int key = 0; key != 'q';) {
       {
         std::unique_lock<std::mutex> lock(mu);
         latest_image_cv.wait(lock, [&] { return latest_image_ready; });
-        std::tie(timestamp, image) = std::move(latest_image);
+        latest = std::move(latest_image);
         latest_image_ready = false;
       }
-      recognizer->Detect(timestamp, image);
+      recognizer->Detect(latest.timestamp, latest.pos, latest.image);
       key = cv::waitKey(1000 / 30);
       while (key == 'p')
         key = cv::waitKey(0); // Wait for another key to be pressed.
       const int kManualMove = kFovInSteps.x / 4;
       switch (key) {
       case 'w':
-        DoAction({Action::UP, kManualMove}, recognizer->robot());
+        DoAction({Action::UP, kManualMove}, robot->tell(), robot);
         break;
       case 'a':
-        DoAction({Action::LEFT, kManualMove}, recognizer->robot());
+        DoAction({Action::LEFT, kManualMove}, robot->tell(), robot);
         break;
       case 's':
-        DoAction({Action::DOWN, kManualMove}, recognizer->robot());
+        DoAction({Action::DOWN, kManualMove}, robot->tell(), robot);
         break;
       case 'd':
-        DoAction({Action::RIGHT, kManualMove}, recognizer->robot());
+        DoAction({Action::RIGHT, kManualMove}, robot->tell(), robot);
         break;
       case 'f':
-        DoAction({Action::FIRE, 0}, recognizer->robot());
+        DoAction({Action::FIRE, 0}, robot->tell(), robot);
         break;
       }
     }
@@ -346,7 +320,7 @@ int main(int argc, char **argv) {
   }
   Recognizer recognizer(robot.get());
   if (argc == 1) {
-    DetectWebcam(&recognizer);
+    DetectWebcam(robot.get(), &recognizer);
   } else {
     DetectImages(&recognizer, argc - 1, argv + 1);
   }
