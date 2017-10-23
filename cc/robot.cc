@@ -49,7 +49,7 @@ RobotLinuxSPI::RobotLinuxSPI(const std::string& device, int baud) {
 	QCHECK(ioctl(fd_, SPI_IOC_RD_BITS_PER_WORD, &bits) != -1);
 	QCHECK(ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) != -1);
 	QCHECK(ioctl(fd_, SPI_IOC_RD_MAX_SPEED_HZ, &speed) != -1);
-  std::cout << "SPI configured to mode=" << mode << " bits=" << bits
+  std::cout << "SPI configured to mode=" << +mode << " bits=" << +bits
             << " speed=" << speed << "Hz" << std::endl;
 }
 
