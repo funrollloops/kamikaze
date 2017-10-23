@@ -15,9 +15,9 @@ std::ostream &operator<<(std::ostream &os, Robot::Pos pos) {
 }
 
 int main(int argc, char *argv[]) {
-  QCHECK(argc > 1) << ": usage: " << argv[0] << " /dev/ttyACM0\n";
+  QCHECK(argc > 1) << ": usage: " << argv[0] << " /dev/spidev0.0 100000\n";
 
-  RobotSerial robot(argv[1], 9600);
+  RobotLinuxSPI robot(argv[1], atoi(argv[2]));
 #define TELL() std::cout << "pos=" << robot.tell() << std::endl
   while (true) {
     TELL();

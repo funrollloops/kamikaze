@@ -10,7 +10,13 @@
 #include "stepper_controller.h"
 #include "stepper_byj48.h"
 
-#define TIMER1_INITIAL (UINT16_MAX - (16ul * 1000 * 1000)/256/(1000))
+#define CLOCK_RATE (16ul * 1000* 1000)
+#define TIMER1_PRESCALER 256
+#define TIMER1_INTERRUPTS_PER_SEC 1000
+#define TIMER1_INITIAL \
+    (UINT16_MAX - CLOCK_RATE/TIMER1_PRESCALER/TIMER1_INTERRUPTS_PER_SEC)
+
+#define ENABLE_SERIAL 0
 
 template <typename Pin>
 class TimedOutput {
@@ -32,9 +38,11 @@ class TimedOutput {
   volatile uint16_t ticks_ = 0;
 };
 
-TimedOutput<OutputPin<13>> led;
+TimedOutput<OutputPin<A0>> led;
 StepperController<StepperBYJ48<4, 6, 5, 7>> stepper1;
-StepperController<StepperBYJ48<9, 11, 8, 10>> stepper2;
+StepperController<StepperBYJ48<1, 3, 0, 2>> stepper2;
+
+struct __attribute__((packed)) PosPair { int16_t first, second; };
 
 ISR(TIMER1_OVF_vect) {
   TCNT1 = TIMER1_INITIAL;
@@ -45,13 +53,22 @@ ISR(TIMER1_OVF_vect) {
 
 void setup() {
   noInterrupts();
+  // Configure TIMER1 to interrupt when TCNT1 reaches UINT16_MAX.
+  // TCNT1 will be incremented every 1/256 clock cycles, or 16ns.
   TCCR1A = 0;
   TCCR1B = 0;
   TCNT1 = TIMER1_INITIAL;
   TCCR1B |= (1 << CS12);  // set prescaler to 256.
   TIMSK1 |= (1 << TOIE1);
+
+  // Enable SPI for read and write.
+  pinMode(MISO, OUTPUT);  // Enable outputting to master.
+  SPCR |= _BV(SPE);  // Enable SPI in slave mode.
+  SPCR |= _BV(SPIE);  // Enable SPI interrupts.
   interrupts();
+#if ENABLE_SERIAL
   Serial.begin(9600);
+#endif
 }
 
 bool parseInt(const char *buf, size_t len, int16_t* value) {
@@ -77,7 +94,6 @@ bool parseInt(const char *buf, size_t len, int16_t* value) {
 }
 
 bool exec_command(char *buf, size_t len) {
-  struct __attribute__((packed)) PosPair { int16_t first, second; };
   struct __attribute__((packed)) Command {
     char hdr;
     union {
@@ -139,6 +155,66 @@ void serialEvent() {
       buffer[received++] = byte;
     }
   }
+}
+
+// Simple SPI protocol implementation: cmd byte followed by spacer/data bytes.
+// Unrecognized commands ignored. For simplicity master should send 6-byte
+// commands, with zero padding.
+enum Cmd {
+  NONE = 0,
+  TELL = 1,
+  SEEK = 2,
+  FIRE = 3,
+};
+
+Cmd cmd = NONE;
+uint8_t cmd_pos = 0;
+uint16_t buf_u16 = 2;
+PosPair buf_pair{0, 0};
+
+ISR (SPI_STC_vect) {
+  const byte c = SPDR;  // grab byte from SPI Data Register
+  switch(cmd) {
+    case NONE:
+      switch (c) {
+        case TELL:
+          buf_pair.first = stepper1.tell();
+          buf_pair.second = stepper2.tell();
+        case SEEK:
+        case FIRE:
+          cmd = Cmd(c);
+          cmd_pos = 0;
+          break;
+        default:
+          SPDR = 0xee;
+      }
+      return;
+    case TELL:  // Master must send 5 dummy bytes.
+      SPDR = reinterpret_cast<volatile byte*>(&buf_pair)[cmd_pos];
+      if (cmd_pos >= sizeof(buf_pair) - 1) {
+        cmd = NONE;
+        return;
+      }
+      break;
+    case SEEK:
+      reinterpret_cast<volatile byte*>(&buf_pair)[cmd_pos] = c;
+      if (cmd_pos >= sizeof(buf_pair) - 1) {
+        stepper1.moveTo(buf_pair.first);
+        stepper2.moveTo(buf_pair.second);
+        cmd = NONE;
+        return;
+      }
+      break;
+    case FIRE:
+      reinterpret_cast<volatile byte*>(&buf_u16)[cmd_pos] = c;
+      if (cmd_pos >= sizeof(buf_u16) - 1) {
+        led.set_ticks(buf_u16);
+        cmd = NONE;
+        return;
+      }
+      break;
+  }
+  ++cmd_pos;
 }
 
 void loop() { }

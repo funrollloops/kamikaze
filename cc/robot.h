@@ -12,7 +12,16 @@ class Robot {
 public:
   virtual ~Robot() {}
 
-  using Pos = std::pair<int16_t, int16_t>;
+  struct Pos {
+    int16_t first, second;
+
+    bool operator==(const Pos& b) const {
+      return first == b.first && second == b.second;
+    }
+    bool operator!=(const Pos& b) const {
+      return !(*this == b);
+    }
+  } __attribute__((__packed__));
   virtual Pos tell() = 0;
   virtual void moveTo(Pos pos) = 0;
   virtual void fire(std::chrono::milliseconds time) = 0;
@@ -41,4 +50,27 @@ public:
 
 private:
   Pos pos_;
+};
+
+class RobotLinuxSPI final : public Robot {
+public:
+  RobotLinuxSPI(const std::string& device, int baud);
+  ~RobotLinuxSPI() final;
+
+  virtual Pos tell();
+  virtual void moveTo(Pos pos);
+  virtual void fire(std::chrono::milliseconds time);
+
+private:
+  enum Tag : uint8_t {
+    TELL = 1,
+    SEEK = 2,
+    FIRE = 3,
+  };
+  std::string sendMessage(const void* send, uint16_t len);
+
+  template <typename T>
+  T sendMessage(const T& t);
+
+  int fd_;
 };

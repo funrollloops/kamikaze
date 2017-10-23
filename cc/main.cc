@@ -17,6 +17,8 @@
 #include <opencv2/opencv.hpp>
 
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
+DEFINE_string(spi, "", "Path to spi device node. If not given, use fake.");
+DEFINE_int32(spi_speed, 100000, "bits/sec for SPI interface.");
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
 DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
@@ -56,7 +58,7 @@ struct Action {
   Action(ActionEnum cmd, int steps) : cmd(cmd), steps(steps) {}
 
   ActionEnum cmd;
-  int steps;
+  uint16_t steps;
 };
 
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -319,7 +321,9 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
 int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::unique_ptr<Robot> robot;
-  if (!FLAGS_tty.empty()) {
+  if (!FLAGS_spi.empty()) {
+    robot.reset(new RobotLinuxSPI(FLAGS_spi, FLAGS_spi_speed));
+  } else if (!FLAGS_tty.empty()) {
     robot.reset(new RobotSerial(FLAGS_tty, 9600));
   } else {
     std::cerr
