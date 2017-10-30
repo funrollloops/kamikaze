@@ -4,13 +4,16 @@
   #include "WProgram.h"
 #endif 
 #include <Wire.h>  // Needed by cmake to generate the pressure sensor deps. (Gross!)
-
+#include <avr/cpufunc.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/sleep.h>
 #include <stdio.h>
 
 #include "stepper_controller.h"
 #include "stepper_byj48.h"
 
-#define CLOCK_RATE (16ul * 1000* 1000)
+#define CLOCK_RATE (F_CPU)
 #define TIMER1_PRESCALER 256
 #define TIMER1_INTERRUPTS_PER_SEC 1000
 #define TIMER1_INITIAL \
@@ -38,37 +41,21 @@ class TimedOutput {
   volatile uint16_t ticks_ = 0;
 };
 
-TimedOutput<OutputPin<A0>> led;
+TimedOutput<PortCOutputPin<PC0>> fire_led;
+TimedOutput<PortCOutputPin<PC1>> reset_led;
 StepperController<StepperBYJ48<4, 6, 5, 7>> stepper1;
 StepperController<StepperBYJ48<1, 3, 0, 2>> stepper2;
 
 struct __attribute__((packed)) PosPair { int16_t first, second; };
 
+EMPTY_INTERRUPT(BADISR_vect)
+
 ISR(TIMER1_OVF_vect) {
   TCNT1 = TIMER1_INITIAL;
   stepper1.tick();
   stepper2.tick();
-  led.tick();
-}
-
-void setup() {
-  noInterrupts();
-  // Configure TIMER1 to interrupt when TCNT1 reaches UINT16_MAX.
-  // TCNT1 will be incremented every 1/256 clock cycles, or 16ns.
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1 = TIMER1_INITIAL;
-  TCCR1B |= (1 << CS12);  // set prescaler to 256.
-  TIMSK1 |= (1 << TOIE1);
-
-  // Enable SPI for read and write.
-  pinMode(MISO, OUTPUT);  // Enable outputting to master.
-  SPCR |= _BV(SPE);  // Enable SPI in slave mode.
-  SPCR |= _BV(SPIE);  // Enable SPI interrupts.
-  interrupts();
-#if ENABLE_SERIAL
-  Serial.begin(9600);
-#endif
+  fire_led.tick();
+  reset_led.tick();
 }
 
 bool parseInt(const char *buf, size_t len, int16_t* value) {
@@ -128,7 +115,7 @@ bool exec_command(char *buf, size_t len) {
       return true;
     case 'f':
       if (len != sizeof(uint16_t) + 1) return false;
-      led.set_ticks(cmd->u16);
+      fire_led.set_ticks(cmd->u16);
       return true;
   }
   return false;
@@ -208,7 +195,7 @@ ISR (SPI_STC_vect) {
     case FIRE:
       reinterpret_cast<volatile byte*>(&buf_u16)[cmd_pos] = c;
       if (cmd_pos >= sizeof(buf_u16) - 1) {
-        led.set_ticks(buf_u16);
+        fire_led.set_ticks(buf_u16);
         cmd = NONE;
         return;
       }
@@ -217,4 +204,38 @@ ISR (SPI_STC_vect) {
   ++cmd_pos;
 }
 
-void loop() { }
+void setup() {
+  cli();  // Disable interrupts.
+  // Set clock divisor to 1 to run at full 8MHz.
+  CLKPR = 0x80;  // Enable setting clock divisor.
+  _NOP();        // Ensure instructions are not re-ordered.
+  CLKPR = 0x00;  // Set divisor to 1.
+  // Configure TIMER1 to interrupt when TCNT1 reaches UINT16_MAX.
+  // TCNT1 will be incremented every 1/256 clock cycles, or 16ns.
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = TIMER1_INITIAL;
+  TCCR1B |= (1 << CS12);  // set prescaler to 256.
+  TIMSK1 |= (1 << TOIE1);
+
+  // Enable SPI for read and write.
+  //DDRB |= _BV(5);  // Enable outputting to master.
+  pinMode(MISO, OUTPUT);
+  SPCR |= _BV(SPE);  // Enable SPI in slave mode.
+  SPCR |= _BV(SPIE);  // Enable SPI interrupts.
+  sei(); // Enable interrups.
+
+  reset_led.set_ticks(TIMER1_INTERRUPTS_PER_SEC / 10); // 100ms.
+#if ENABLE_SERIAL
+  Serial.begin(9600);
+#endif
+}
+
+void loop() {}
+
+int main() {
+  setup();
+  while (true) {
+    sleep_mode();
+  }
+}

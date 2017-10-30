@@ -12,12 +12,12 @@ cmake_minimum_required(VERSION 2.8)
 #====================================================================#
 
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/arduino-cmake/cmake/ArduinoToolchain.cmake) # Arduino Toolchain
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -O2")
 
 project( kamikaze-slave C CXX)
 set(FIRMWARE_NAME kamikaze-slave-firmware )
 
-set(${FIRMWARE_NAME}_BOARD uno)               # Arduino Target board
+set(${FIRMWARE_NAME}_BOARD pro328)               # Arduino Target board
 set(${FIRMWARE_NAME}_SRCS  kamikaze.cc)
 
 set(${FIRMWARE_NAME}_PORT /dev/ttyUSB0)            # Serial upload port

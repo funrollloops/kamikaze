@@ -5,8 +5,8 @@
 
 template <int kA1, int kA2, int kB1, int kB2> class StepperBYJ48 {
  public:
-  static constexpr auto ON = HIGH;
-  static constexpr auto OFF = LOW;
+  static constexpr auto ON = LOW;
+  static constexpr auto OFF = HIGH;
 
   StepperBYJ48() {
     pinA1 = ON;
