@@ -8,11 +8,11 @@
 #include "stepper_byj48.h"
 
 #define CLOCK_RATE F_CPU
-#define TIMER1_PRESCALER 64
-#define TIMER1_INTERRUPTS_PER_SEC 1000
+#define TIMER2_PRESCALER 64
+#define TIMER2_INTERRUPTS_PER_SEC 1000
 // Compute number of timer ticks between interrupts.
-#define TIMER1_INITIAL \
-    (UINT16_MAX - CLOCK_RATE/TIMER1_PRESCALER/TIMER1_INTERRUPTS_PER_SEC)
+#define TIMER2_INITIAL \
+    (UINT8_MAX - CLOCK_RATE/TIMER2_PRESCALER/TIMER2_INTERRUPTS_PER_SEC)
 
 // Attached peripherals, with configuration.
 TimedOutput<PortCOutputPin<PC0>> fire_led;
@@ -24,8 +24,8 @@ struct __attribute__((packed)) PosPair { int16_t first, second; };
 
 EMPTY_INTERRUPT(BADISR_vect)
 
-ISR(TIMER1_OVF_vect) {
-  TCNT1 = TIMER1_INITIAL;
+ISR(TIMER2_OVF_vect) {
+  TCNT2 = TIMER2_INITIAL;
   stepper1.tick();
   stepper2.tick();
   fire_led.tick();
@@ -99,12 +99,12 @@ void setup() {
   _NOP();        // Ensure instructions are not re-ordered.
   CLKPR = 0x00;  // Set divisor to 1.
 
-  // Configure TIMER1 to interrupt when TCNT1 reaches UINT16_MAX.
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1 = TIMER1_INITIAL;
-  TCCR1B |= ~_BV(CS12) & (_BV(CS11) | _BV(CS10));  // set prescaler to 64.
-  TIMSK1 |= _BV(TOIE1);
+  // Configure TIMER2 to interrupt when TCNT2 reaches UINT8_MAX.
+  TCCR2A = 0;
+  TCCR2B = 0;
+  TCCR2B |= _BV(CS22);  // set prescaler to 64.
+  TCNT2 = TIMER2_INITIAL;
+  TIMSK2 |= _BV(TOIE2);
 
   // Enable SPI for read and write.
   DDRB |= _BV(4);  // Set MISO pin to output.
@@ -116,7 +116,7 @@ void setup() {
   MCUSR = 0;
   sei(); // Enable interrups.
 
-  reset_led.set_ticks(TIMER1_INTERRUPTS_PER_SEC / 10); // 100ms.
+  reset_led.set_ticks(TIMER2_INTERRUPTS_PER_SEC / 10); // 100ms.
 }
 
 int main() {
