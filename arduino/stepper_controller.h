@@ -1,6 +1,7 @@
 #ifndef FUNROLLLOOPS_ARDUINO_STEPPER_CONTROLLER_H_
 #define FUNROLLLOOPS_ARDUINO_STEPPER_CONTROLLER_H_
 
+#include <util/delay.h>
 #include <stdint.h>
 
 template <typename Stepper>
@@ -24,7 +25,7 @@ class StepperController {
    int16_t tell() const { return pos_; }
    int16_t target() const { return target_; }
    void wait() const {
-     while (pos_ != target_) delay(1);
+     while (pos_ != target_) _delay_ms(10);
    }
 
  private:
