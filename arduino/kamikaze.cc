@@ -35,7 +35,7 @@ ISR(TIMER2_OVF_vect) {
 // Simple SPI protocol implementation: cmd byte followed by spacer/data bytes.
 // Unrecognized commands ignored. For simplicity master should send 6-byte
 // commands, with zero padding.
-enum Cmd {
+enum Cmd : uint8_t {
   NONE = 0,
   TELL = 1,
   SEEK = 2,
@@ -48,48 +48,43 @@ uint16_t buf_u16 = 2;
 PosPair buf_pair{0, 0};
 
 ISR (SPI_STC_vect) {
-  const uint8_t c = SPDR;  // grab byte from SPI Data Register
   switch(cmd) {
-    case NONE:
-      switch (c) {
-        case TELL:
-          buf_pair.first = stepper1.tell();
-          buf_pair.second = stepper2.tell();
-        case SEEK:
-        case FIRE:
-          cmd = Cmd(c);
-          cmd_pos = 0;
-          break;
-        default:
-          SPDR = 0xee;
+    case TELL:  // Master must send 5 dummy bytes.
+      SPDR = reinterpret_cast<uint8_t*>(&buf_pair)[cmd_pos++];
+      if (cmd_pos >= sizeof(buf_pair)) {
+        cmd = NONE;
       }
       return;
-    case TELL:  // Master must send 5 dummy bytes.
-      SPDR = reinterpret_cast<uint8_t*>(&buf_pair)[cmd_pos];
-      if (cmd_pos >= sizeof(buf_pair) - 1) {
-        cmd = NONE;
-        return;
-      }
-      break;
     case SEEK:
-      reinterpret_cast<uint8_t*>(&buf_pair)[cmd_pos] = c;
-      if (cmd_pos >= sizeof(buf_pair) - 1) {
+      reinterpret_cast<uint8_t*>(&buf_pair)[cmd_pos++] = SPDR;
+      if (cmd_pos >= sizeof(buf_pair)) {
         stepper1.moveTo(buf_pair.first);
         stepper2.moveTo(buf_pair.second);
         cmd = NONE;
-        return;
       }
-      break;
+      return;
     case FIRE:
-      reinterpret_cast<uint8_t*>(&buf_u16)[cmd_pos] = c;
-      if (cmd_pos >= sizeof(buf_u16) - 1) {
+      reinterpret_cast<uint8_t*>(&buf_u16)[cmd_pos++] = SPDR;
+      if (cmd_pos >= sizeof(buf_u16)) {
         fire_led.set_ticks(buf_u16);
         cmd = NONE;
-        return;
       }
-      break;
+      return;
+    default:
+      cmd = Cmd(SPDR);
+      cmd_pos = 0;
+      switch (cmd) {
+        case TELL:
+          buf_pair = {stepper1.tell(), stepper2.tell()};
+        case SEEK:
+        case FIRE:
+          break;
+        default:
+          cmd = NONE;
+          SPDR = 0xee;
+      }
+      return;
   }
-  ++cmd_pos;
 }
 
 void setup() {
