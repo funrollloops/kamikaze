@@ -8,7 +8,7 @@
 #include "stepper_byj48.h"
 
 #define CLOCK_RATE F_CPU
-#define TIMER1_PRESCALER 256
+#define TIMER1_PRESCALER 64
 #define TIMER1_INTERRUPTS_PER_SEC 1000
 // Compute number of timer ticks between interrupts.
 #define TIMER1_INITIAL \
@@ -98,20 +98,22 @@ void setup() {
   CLKPR = 0x80;  // Enable setting clock divisor.
   _NOP();        // Ensure instructions are not re-ordered.
   CLKPR = 0x00;  // Set divisor to 1.
+
   // Configure TIMER1 to interrupt when TCNT1 reaches UINT16_MAX.
-  // TCNT1 will be incremented every 1/256 clock cycles, or 16ns.
   TCCR1A = 0;
   TCCR1B = 0;
   TCNT1 = TIMER1_INITIAL;
-  TCCR1B |= (1 << CS12);  // set prescaler to 256.
-  TIMSK1 |= (1 << TOIE1);
+  TCCR1B |= ~_BV(CS12) & (_BV(CS11) | _BV(CS10));  // set prescaler to 64.
+  TIMSK1 |= _BV(TOIE1);
 
   // Enable SPI for read and write.
-  DDRB |= _BV(4);  // Enable outputting to master.
+  DDRB |= _BV(4);  // Set MISO pin to output.
   SPCR |= _BV(SPE);  // Enable SPI in slave mode.
   SPCR |= _BV(SPIE);  // Enable SPI interrupts.
 
-  SPDR = MCUSR;  // Put status register into SPDR on reset.
+  // Put status register into SPDR on reset to help debug.
+  SPDR = MCUSR;
+  MCUSR = 0;
   sei(); // Enable interrups.
 
   reset_led.set_ticks(TIMER1_INTERRUPTS_PER_SEC / 10); // 100ms.
