@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/sagarm/code/kamikaze/daughterboard/daughterboard.sch)
-    (date "Sun 12 Nov 2017 01:39:35 AM PST")
+    (date "Sun 12 Nov 2017 11:57:39 AM PST")
     (tool "Eeschema 4.0.2+dfsg1-stable")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -35,7 +35,7 @@
       (tstamp 59F55314))
     (comp (ref CON1)
       (value 12V_JACK)
-      (footprint Connect:BARREL_JACK)
+      (footprint footprints:BARREL_JACK)
       (libsource (lib conn) (part BARREL_JACK))
       (sheetpath (names /) (tstamps /))
       (tstamp 59F556D0))
