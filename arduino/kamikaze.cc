@@ -14,11 +14,21 @@
 #define TIMER2_INITIAL \
     (UINT8_MAX - CLOCK_RATE/TIMER2_PRESCALER/TIMER2_INTERRUPTS_PER_SEC)
 
+#ifndef A0
+#define A0 14
+#define A1 15
+#define A2 16
+#define A3 17
+#define A4 18
+#define A5 19
+#define A6 20
+#endif
+
 // Attached peripherals, with configuration.
 TimedOutput<PortCOutputPin<PC0>> fire_led;
 TimedOutput<PortCOutputPin<PC1>> reset_led;
-StepperController<StepperBYJ48<4, 6, 5, 7>> stepper1;
-StepperController<StepperBYJ48<1, 3, 0, 2>> stepper2;
+StepperController<StepperBYJ48<A5, A3, A4, A2>> stepper1;
+StepperController<StepperBYJ48<2, 0, 3, 1>> stepper2;
 
 struct __attribute__((packed)) PosPair { int16_t first, second; };
 
