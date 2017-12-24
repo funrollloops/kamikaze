@@ -282,15 +282,15 @@ void DetectWebcam(CaptureSource *capture, Recognizer *recognizer,
       key = cv::waitKey(1000 / 30);
       while (key == 'p')
         key = cv::waitKey(0); // Wait for another key to be pressed.
-      const int16_t kManualMove = kFovInSteps.x / 4;
+      const auto kManualMove = kFovInSteps / 4;
       const auto act = [&](Action::ActionEnum action, int16_t x, int16_t y) {
         DoAction(Action{action, Robot::Pos{x, y}}, robot->tell(), robot);
       };
       switch (key) {
-      case 'w': act(Action::MOVE, 0, kManualMove); break;
-      case 'a': act(Action::MOVE, -kManualMove, 0); break;
-      case 's': act(Action::MOVE, 0, -kManualMove); break;
-      case 'd': act(Action::MOVE, kManualMove, 0); break;
+      case 'w': act(Action::MOVE, 0, kManualMove.y); break;
+      case 'a': act(Action::MOVE, -kManualMove.x, 0); break;
+      case 's': act(Action::MOVE, 0, -kManualMove.y); break;
+      case 'd': act(Action::MOVE, kManualMove.x, 0); break;
       case 'f': act(Action::FIRE, 0, 0); break;
       }
     }
