@@ -2,6 +2,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <ctime>
+#include <experimental/optional>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -45,8 +46,11 @@ static const cv::Scalar kWhite(255, 255, 255);
 static const cv::Point kImageSize(1280, 720);
 static const cv::Point kTarget = kImageSize / 2;
 static const cv::Point kFovInSteps(300, -250);
-static const int kTargetSize = 20;
-static const int kMinStep = 4;
+static constexpr int kTargetSize = 20;
+static constexpr int kMinStep = 4;
+
+using std::experimental::optional;
+using std::experimental::nullopt;
 
 const char *kActionNames[] = {"MOVE", "FIRE"};
 struct Action {
@@ -64,8 +68,8 @@ time_point now() { return std::chrono::high_resolution_clock::now(); }
 void DoAction(Action action, Robot::Pos pos, Robot *robot) {
   switch (action.cmd) {
   case Action::MOVE:
-    robot->moveTo({int16_t(action.delta.first - pos.first ),
-        int16_t(action.delta.second - pos.second)});
+    robot->moveTo({int16_t(action.delta.first + pos.first),
+                   int16_t(action.delta.second + pos.second)});
     return;
   case Action::FIRE:
     robot->fire(kFireTime);
@@ -117,8 +121,7 @@ public:
     return best_face;
   }
 
-  std::vector<Action> DetermineAction(cv::Mat &input_img,
-                                      const cv::Point &mouth) {
+  optional<Action> DetermineAction(cv::Mat &input_img, const cv::Point &mouth) {
     CHECK(input_img.rows == kImageSize.y)
         << "rows=" << input_img.rows << " expected_height=" << kImageSize.y;
     CHECK(input_img.cols == kImageSize.x) << "cols=" << input_img.cols
@@ -128,20 +131,19 @@ public:
                           cv::Size(kTargetSize, kTargetSize));
     PlotFeature(input_img, target, kTeal);
     auto vec = (kTarget - mouth) * kFovInSteps / kImageSize;
-    std::vector<Action> actions;
     if (abs(vec.x) > 4 || abs(vec.y) > 4) {
-      actions.emplace_back(Action::MOVE, Robot::Pos{int16_t(vec.x), int16_t(vec.y)});
       maybe_fire_ = 0;
-    } else {
-      auto fire_time = now();
-      if (++maybe_fire_ > kMinConsecutiveOnTargetToFire &&
-          fire_time - last_fire_ > kMinTimeBetweenFire) {
-        last_fire_ = fire_time;
-        actions.emplace_back(Action::FIRE, Robot::Pos{0, 0});
-        maybe_fire_ = 0;
-      }
+      return Action(Action::MOVE, Robot::Pos{int16_t(vec.x), int16_t(vec.y)});
     }
-    return actions;
+
+    auto fire_time = now();
+    if (++maybe_fire_ > kMinConsecutiveOnTargetToFire &&
+        fire_time - last_fire_ > kMinTimeBetweenFire) {
+      maybe_fire_ = 0;
+      last_fire_ = fire_time;
+      return Action(Action::FIRE, Robot::Pos{0, 0});
+    }
+    return nullopt;
   }
 
   std::vector<cv::Rect> DetectMultiScale(cv::CascadeClassifier *cc,
@@ -167,16 +169,17 @@ public:
     for (const cv::Rect& face : faces) {
       PlotFeature(input_img, face, kBlue);
     }
+    line2 << "pos=" << pos << " ";
     if (!faces.empty()) {
       auto face = BestFace(faces);
       cv::Rect mouth = GuessMouthLocation(face);
       PlotFeature(input_img, mouth, kYellow);
-      for (Action action : DetermineAction(input_img, Center(mouth))) {
-        DoAction(action, pos, robot_);
-        line2 << action << " ";
+      if (optional<Action> action = DetermineAction(input_img, Center(mouth))) {
+        DoAction(*action, pos, robot_);
+        line2 << *action << " ";
       }
       if (maybe_fire_ > 0) {
-        line2 << "maybe_fire(" << maybe_fire_ << ")";
+        line2 << "maybe_fire(" << maybe_fire_ << ") ";
       }
     }
     last_action_ = now();
@@ -184,7 +187,10 @@ public:
           << ((last_action_ - timestamp) / std::chrono::milliseconds(1))
           << " ms";
     if (FLAGS_preview) {
-      cv::putText(input_img, line1.str(), cv::Point(0, 20),
+      const cv::Size line1_size =
+          cv::getTextSize(line1.str(), cv::FONT_HERSHEY_PLAIN,
+                          /*fontScale=*/1, /*thickness=*/1, nullptr);
+      cv::putText(input_img, line1.str(), kImageSize - line1_size,
                   cv::FONT_HERSHEY_PLAIN, 1, kWhite);
       cv::putText(input_img, line2.str(), cv::Point(0, 40),
                   cv::FONT_HERSHEY_PLAIN, 2, kWhite);
@@ -231,7 +237,8 @@ void DetectImages(Recognizer *recognizer, int argc, char **argv) {
   }
 }
 
-void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) {
+void DetectWebcam(CaptureSource *capture, Recognizer *recognizer,
+                  Robot *robot) {
   std::mutex mu;
   std::condition_variable latest_image_cv;
   LatestImage latest_image;
@@ -275,25 +282,16 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
       key = cv::waitKey(1000 / 30);
       while (key == 'p')
         key = cv::waitKey(0); // Wait for another key to be pressed.
-      const int kManualMove = kFovInSteps.x / 4;
+      const int16_t kManualMove = kFovInSteps.x / 4;
+      const auto act = [&](Action::ActionEnum action, int16_t x, int16_t y) {
+        DoAction(Action{action, Robot::Pos{x, y}}, robot->tell(), robot);
+      };
       switch (key) {
-      /*
-      case 'w':
-        DoAction({Action::UP, kManualMove}, robot->tell(), robot);
-        break;
-      case 'a':
-        DoAction({Action::LEFT, kManualMove}, robot->tell(), robot);
-        break;
-      case 's':
-        DoAction({Action::DOWN, kManualMove}, robot->tell(), robot);
-        break;
-      case 'd':
-        DoAction({Action::RIGHT, kManualMove}, robot->tell(), robot);
-        break;
-        */
-      case 'f':
-        DoAction({Action::FIRE, {}}, robot->tell(), robot);
-        break;
+      case 'w': act(Action::MOVE, 0, kManualMove); break;
+      case 'a': act(Action::MOVE, -kManualMove, 0); break;
+      case 's': act(Action::MOVE, 0, -kManualMove); break;
+      case 'd': act(Action::MOVE, kManualMove, 0); break;
+      case 'f': act(Action::FIRE, 0, 0); break;
       }
     }
     done = true;
