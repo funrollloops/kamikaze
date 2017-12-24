@@ -33,8 +33,8 @@ Robot::Pos RobotSerial::tell() {
   std::string response;
   while (!io_.SendAndRead("t", 1, &response) ||
          response.size() != sizeof(Pos)) {
-    std::cerr << "warning: bad response to tell() cmd: " << AsBytes(response)
-              << std::endl;
+    LOG(WARNING) << "bad response to tell() cmd: " << AsBytes(response)
+                 << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   return *reinterpret_cast<const Pos*>(response.data());
@@ -68,7 +68,7 @@ RobotLinuxSPI::RobotLinuxSPI(const std::string& device, int baud) {
 	CHECK(ioctl(fd_, SPI_IOC_RD_BITS_PER_WORD, &bits) != -1);
 	CHECK(ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) != -1);
 	CHECK(ioctl(fd_, SPI_IOC_RD_MAX_SPEED_HZ, &speed) != -1);
-  std::cout << "SPI configured to mode=" << +mode << " bits=" << +bits
+  LOG(INFO) << "SPI configured to mode=" << +mode << " bits=" << +bits
             << " speed=" << speed << "Hz" << std::endl;
 }
 
@@ -117,7 +117,7 @@ std::string RobotLinuxSPI::sendMessage(const void* send, uint16_t len) {
     .delay_usecs = 500,
   };
   CHECK(ioctl(fd_, SPI_IOC_MESSAGE(1), &tr) >= 1);
-  std::cout
+  VLOG(3)
       << "i2c r/w: "
       << AsBytes(std::string(reinterpret_cast<const char*>(send), len))
       << " -> " << AsBytes(response)
