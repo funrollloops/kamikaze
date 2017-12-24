@@ -50,7 +50,7 @@ static const cv::Point kTargetCenter(640, 480);
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
 // Movement.
-static const cv::Point kFovInSteps(600, 250);
+static const cv::Point kFovInSteps(600, 550);
 static constexpr int kMinStep = 4;
 
 using std::experimental::optional;
