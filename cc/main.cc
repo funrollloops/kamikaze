@@ -47,18 +47,18 @@ static const cv::Scalar kWhite(255, 255, 255);
 
 static const cv::Point kImageSize(1280, 720);
 static const cv::Point kTarget = kImageSize / 2;
-static const cv::Point kFovInSteps(200, 100);
+static const cv::Point kFovInSteps(300, -250);
 static const int kTargetSize = 20;
 static const int kMinStep = 4;
 
-const char *kActionNames[] = {"LEFT", "RIGHT", "DOWN", "UP", "FIRE"};
+const char *kActionNames[] = {"MOVE", "FIRE"};
 struct Action {
-  enum ActionEnum { LEFT, RIGHT, DOWN, UP, FIRE };
+  enum ActionEnum { MOVE, FIRE };
 
-  Action(ActionEnum cmd, int steps) : cmd(cmd), steps(steps) {}
+  Action(ActionEnum cmd, Robot::Pos delta) : cmd(cmd), delta(delta) {}
 
   ActionEnum cmd;
-  uint16_t steps;
+  Robot::Pos delta;
 };
 
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -66,17 +66,9 @@ time_point now() { return std::chrono::high_resolution_clock::now(); }
 
 void DoAction(Action action, Robot::Pos pos, Robot *robot) {
   switch (action.cmd) {
-  case Action::LEFT:
-    robot->moveTo({pos.first - action.steps, pos.second});
-    return;
-  case Action::RIGHT:
-    robot->moveTo({pos.first + action.steps, pos.second});
-    return;
-  case Action::DOWN:
-    robot->moveTo({pos.first, pos.second - action.steps});
-    return;
-  case Action::UP:
-    robot->moveTo({pos.first, pos.second + action.steps});
+  case Action::MOVE:
+    robot->moveTo({int16_t(action.delta.first - pos.first ),
+        int16_t(action.delta.second - pos.second)});
     return;
   case Action::FIRE:
     robot->fire(kFireTime);
@@ -85,7 +77,7 @@ void DoAction(Action action, Robot::Pos pos, Robot *robot) {
 }
 
 std::ostream &operator<<(std::ostream &os, Action action) {
-  return os << kActionNames[action.cmd] << "(" << action.steps << ")";
+  return os << kActionNames[action.cmd] << "(" << action.delta << ")";
 }
 
 class Recognizer {
@@ -140,21 +132,15 @@ public:
     PlotFeature(input_img, target, kTeal);
     auto vec = (kTarget - mouth) * kFovInSteps / kImageSize;
     std::vector<Action> actions;
-    if (abs(vec.x) > 4) {
-      actions.emplace_back(vec.x < 0 ? Action::RIGHT : Action::LEFT,
-                           abs(vec.x));
+    if (abs(vec.x) > 4 || abs(vec.y) > 4) {
+      actions.emplace_back(Action::MOVE, Robot::Pos{int16_t(vec.x), int16_t(vec.y)});
       maybe_fire_ = 0;
-    }
-    if (abs(vec.y) > 4) {
-      actions.emplace_back(vec.y < 0 ? Action::DOWN : Action::UP, abs(vec.y));
-      maybe_fire_ = 0;
-    }
-    if (actions.empty()) {
+    } else {
       auto fire_time = now();
       if (++maybe_fire_ > kMinConsecutiveOnTargetToFire &&
           fire_time - last_fire_ > kMinTimeBetweenFire) {
         last_fire_ = fire_time;
-        actions.emplace_back(Action::FIRE, 0);
+        actions.emplace_back(Action::FIRE, Robot::Pos{0, 0});
         maybe_fire_ = 0;
       }
     }
@@ -294,6 +280,7 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
         key = cv::waitKey(0); // Wait for another key to be pressed.
       const int kManualMove = kFovInSteps.x / 4;
       switch (key) {
+      /*
       case 'w':
         DoAction({Action::UP, kManualMove}, robot->tell(), robot);
         break;
@@ -306,8 +293,9 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
       case 'd':
         DoAction({Action::RIGHT, kManualMove}, robot->tell(), robot);
         break;
+        */
       case 'f':
-        DoAction({Action::FIRE, 0}, robot->tell(), robot);
+        DoAction({Action::FIRE, {}}, robot->tell(), robot);
         break;
       }
     }

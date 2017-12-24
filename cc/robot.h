@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include <chrono>
-#include <iostream>
+#include <iosfwd>
 #include <string>
 #include <thread>
 #include <vector>
@@ -26,6 +26,8 @@ public:
   virtual void moveTo(Pos pos) = 0;
   virtual void fire(std::chrono::milliseconds time) = 0;
 };
+
+std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos);
 
 class RobotSerial final : public Robot {
 public:

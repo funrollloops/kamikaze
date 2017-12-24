@@ -1,10 +1,15 @@
 #include "robot.h"
 
+#include <iostream>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <linux/types.h>
 
 #include "logging.h"
+
+std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos) {
+  return os << pos.first << ", " << pos.second;
+}
 
 RobotSerial::RobotSerial(const std::string &tty, int baud) : io_(tty, baud) {}
 
