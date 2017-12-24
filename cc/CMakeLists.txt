@@ -18,7 +18,7 @@ function(Dependency name GIT_REPOSITORY GIT_TAG)
     GIT_TAG ${GIT_TAG}
     INSTALL_DIR ${THIRD_PARTY}
     DEPENDS ${ARGN}
-    CONFIGURE_COMMAND CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR} cmake -DCMAKE_BUILD_TYPE=Release -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> <SOURCE_DIR>
+    CONFIGURE_COMMAND CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR} cmake -DCMAKE_BUILD_TYPE=Release -G${CMAKE_GENERATOR} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> <SOURCE_DIR>
     UPDATE_COMMAND ""
     BUILD_COMMAND cmake --build <BINARY_DIR>
     INSTALL_COMMAND cmake --build <BINARY_DIR> -- install)
@@ -46,7 +46,7 @@ target_compile_features( kamikaze PRIVATE cxx_constexpr cxx_decltype_auto )
 add_dependencies( kamikaze external_raspicam external_glog external_gflags )
 
 add_executable( robot_test robot_test.cc robot.cc arduinoio.cc )
-target_link_libraries( robot_test -lpthread -lboost_system raspicam_cv gflags glog)
+target_link_libraries( robot_test pthread boost_system gflags glog)
 target_compile_features( robot_test PRIVATE cxx_constexpr cxx_decltype_auto )
 add_dependencies( robot_test external_gflags external_glog )
 
