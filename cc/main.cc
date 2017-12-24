@@ -16,9 +16,6 @@
 
 #include <opencv2/opencv.hpp>
 
-DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
-DEFINE_string(spi, "", "Path to spi device node. If not given, use fake.");
-DEFINE_int32(spi_speed, 100000, "bits/sec for SPI interface.");
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
 DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
@@ -308,17 +305,7 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
 
 int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  std::unique_ptr<Robot> robot;
-  if (!FLAGS_spi.empty()) {
-    robot.reset(new RobotLinuxSPI(FLAGS_spi, FLAGS_spi_speed));
-  } else if (!FLAGS_tty.empty()) {
-    robot.reset(new RobotSerial(FLAGS_tty, 9600));
-  } else {
-    std::cerr
-        << "warning: using fake robot. Provide --tty to connect to an arduino."
-        << std::endl;
-    robot.reset(new NoOpRobot());
-  }
+  std::unique_ptr<Robot> robot = Robot::FromFlags();
   Recognizer recognizer(robot.get());
   if (FLAGS_raspicam) {
     RaspiCamCaptureSource raspicam(kImageSize.x, kImageSize.y);

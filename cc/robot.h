@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <iosfwd>
+#include <gflags/gflags.h>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -25,6 +27,8 @@ public:
   virtual Pos tell() = 0;
   virtual void moveTo(Pos pos) = 0;
   virtual void fire(std::chrono::milliseconds time) = 0;
+
+  static std::unique_ptr<Robot> FromFlags();
 };
 
 std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos);
@@ -44,14 +48,36 @@ private:
 
 class NoOpRobot final : public Robot {
 public:
-  virtual Pos tell() { return pos_; }
-  virtual void moveTo(Pos pos) { pos_ = pos; }
+  virtual Pos tell() {
+    // Simulate moving at 1 step / ms.
+    if (pos_ != target_) {
+      auto now = std::chrono::system_clock::now();
+      int ms = (now - last_set_) / std::chrono::milliseconds(1);
+      if (abs(pos_.first - target_.first) > ms)
+        pos_.first += target_.first > pos_.first ? ms : -ms;
+      else
+        pos_.first = target_.first;
+      if (abs(pos_.second - target_.second) > ms)
+        pos_.second += target_.second > pos_.second ? ms : -ms;
+      else
+        pos_.second = target_.second;
+      last_set_ = now;
+    }
+    return pos_;
+  }
+  virtual void moveTo(Pos pos) {
+    tell();
+    target_ = pos;
+  }
   void fire(std::chrono::milliseconds time) final {
     std::this_thread::sleep_for(time);
   }
 
 private:
-  Pos pos_;
+  Pos pos_{0,0};
+  Pos target_{0, 0};
+  std::chrono::time_point<std::chrono::system_clock> last_set_ =
+    std::chrono::system_clock::now();
 };
 
 class RobotLinuxSPI final : public Robot {

@@ -7,6 +7,22 @@
 
 #include "logging.h"
 
+DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
+DEFINE_string(spi, "", "Path to spi device node. If not given, use fake.");
+DEFINE_int32(spi_speed, 100000, "bits/sec for SPI interface.");
+
+std::unique_ptr<Robot> Robot::FromFlags() {
+  if (!FLAGS_spi.empty()) {
+    return std::make_unique<RobotLinuxSPI>(FLAGS_spi, FLAGS_spi_speed);
+  } else if (!FLAGS_tty.empty()) {
+    return std::make_unique<RobotSerial>(FLAGS_tty, 9600);
+  }
+  std::cerr
+      << "warning: using fake robot. Provide --tty to connect to an arduino."
+      << std::endl;
+  return std::make_unique<NoOpRobot>();
+}
+
 std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos) {
   return os << pos.first << ", " << pos.second;
 }

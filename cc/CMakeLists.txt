@@ -8,4 +8,9 @@ include_directories( ${OpenCV_INCLUDE_DIRS} ${raspicam_INCLUDE_DIRS} )
 add_executable( kamikaze main.cc robot.cc arduinoio.cc )
 target_link_libraries( kamikaze ${OpenCV_LIBS} -lpthread -lboost_system raspicam_cv gflags )
 target_compile_features( kamikaze PRIVATE cxx_constexpr cxx_decltype_auto )
+
+add_executable( robot_test robot_test.cc robot.cc arduinoio.cc )
+target_link_libraries( robot_test -lpthread -lboost_system raspicam_cv gflags )
+target_compile_features( robot_test PRIVATE cxx_constexpr cxx_decltype_auto )
+
 find_package( Threads )

@@ -1,36 +1,80 @@
-#include "robot.h"
-#include "logging.h"
-
 #include <chrono>
 #include <iostream>
 #include <string>
 #include <thread>
 
+#include <gflags/gflags.h>
+
+#include "robot.h"
+#include "logging.h"
+
+DEFINE_bool(interactive, true, "Run repl?");
+
 void sleep_ms(int ms) {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-std::ostream &operator<<(std::ostream &os, Robot::Pos pos) {
-  return os << pos.first << "," << pos.second;
-}
-
-int main(int argc, char *argv[]) {
-  QCHECK(argc > 1) << ": usage: " << argv[0] << " /dev/spidev0.0 100000\n";
-
-  RobotLinuxSPI robot(argv[1], atoi(argv[2]));
-#define TELL() std::cout << "pos=" << robot.tell() << std::endl
+void scripted_loop(Robot* robot) {
+#define TELL() std::cout << "pos=" << robot->tell() << std::endl
   while (true) {
     TELL();
-    robot.fire(std::chrono::milliseconds(1500));
-    robot.moveTo({-500, 1024});
+    robot->fire(std::chrono::milliseconds(1500));
+    robot->moveTo({-500, 1024});
     TELL();
     sleep_ms(500);
     TELL();
-    robot.moveTo({500, 1024});
+    robot->moveTo({500, 1024});
     sleep_ms(2500);
     TELL();
-    robot.moveTo({200, -568});
+    robot->moveTo({200, -568});
     sleep_ms(5000);
+  }
+}
+
+void repl(Robot* robot) {
+  char cmd;
+  while (true) {
+    std::cin >> cmd;
+    switch (cmd) {
+      case 't':
+        std::cout << "tell -> " << robot->tell() << std::endl;
+        break;
+      case 'f': {
+        int fire_time;
+        std::cin >> fire_time;
+        std::cout << "fire(" << fire_time << " ms) -> void" << std::endl;
+        robot->fire(std::chrono::milliseconds(fire_time));
+        break;
+      }
+      case 'm': {
+        int16_t x, y;
+        std::cin >> x >> y;
+        std::cout << "move(" << x << ", " << y << ")" << std::endl;
+        robot->moveTo(Robot::Pos{x, y});
+        break;
+      }
+      case 's':
+        scripted_loop(robot);
+      case 'r': {
+        const Robot::Pos pos = robot->tell();
+        int16_t dx, dy;
+        std::cin >> dx >> dy;
+        std::cout << "relative(" << pos.first << "+" << dx << ", "
+                  << pos.second << "+" << dy << ")" << std::endl;
+        robot->moveTo(
+            Robot::Pos{int16_t(pos.first + dx), int16_t(pos.second + dy)});
+      }
+    }
+  }
+}
+
+int main(int argc, char *argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  std::unique_ptr<Robot> robot = Robot::FromFlags();
+  if (FLAGS_interactive) {
+    repl(robot.get());
+  } else {
+    scripted_loop(robot.get());
   }
   return 0;
 }
