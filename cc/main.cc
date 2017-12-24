@@ -44,9 +44,13 @@ static const cv::Scalar kYellow(0, 255, 255);
 static const cv::Scalar kWhite(255, 255, 255);
 
 static const cv::Point kImageSize(1280, 720);
-static const cv::Point kTarget = kImageSize / 2;
-static const cv::Point kFovInSteps(300, -250);
+// Targeting.
 static constexpr int kTargetSize = 20;
+static const cv::Point kTargetCenter(640, 480);
+static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
+                                  cv::Size(kTargetSize, kTargetSize));
+// Movement.
+static const cv::Point kFovInSteps(600, 250);
 static constexpr int kMinStep = 4;
 
 using std::experimental::optional;
@@ -114,7 +118,8 @@ public:
   static cv::Rect BestFace(std::vector<cv::Rect> &faces) {
     cv::Rect best_face = faces[0];
     for (const cv::Rect& face : faces) {
-      if (sqdist(Center(face), kTarget) < sqdist(Center(best_face), kTarget)) {
+      if (sqdist(Center(face), kTargetCenter) <
+              sqdist(Center(best_face), kTargetCenter)) {
         best_face = face;
       }
     }
@@ -126,11 +131,7 @@ public:
         << "rows=" << input_img.rows << " expected_height=" << kImageSize.y;
     CHECK(input_img.cols == kImageSize.x) << "cols=" << input_img.cols
                                            << " expected_with=" << kImageSize.x;
-    constexpr int kTargetSize = 20;
-    const cv::Rect target(kTarget - kTargetSize / 2,
-                          cv::Size(kTargetSize, kTargetSize));
-    PlotFeature(input_img, target, kTeal);
-    auto vec = (kTarget - mouth) * kFovInSteps / kImageSize;
+    auto vec = (mouth - kTargetCenter) * kFovInSteps / kImageSize;
     if (abs(vec.x) > 4 || abs(vec.y) > 4) {
       maybe_fire_ = 0;
       return Action(Action::MOVE, Robot::Pos{int16_t(vec.x), int16_t(vec.y)});
@@ -169,6 +170,7 @@ public:
     for (const cv::Rect& face : faces) {
       PlotFeature(input_img, face, kBlue);
     }
+    PlotFeature(input_img, kTargetArea, kTeal);
     line2 << "pos=" << pos << " ";
     if (!faces.empty()) {
       auto face = BestFace(faces);
@@ -287,9 +289,9 @@ void DetectWebcam(CaptureSource *capture, Recognizer *recognizer,
         DoAction(Action{action, Robot::Pos{x, y}}, robot->tell(), robot);
       };
       switch (key) {
-      case 'w': act(Action::MOVE, 0, kManualMove.y); break;
+      case 'w': act(Action::MOVE, 0, -kManualMove.y); break;
       case 'a': act(Action::MOVE, -kManualMove.x, 0); break;
-      case 's': act(Action::MOVE, 0, -kManualMove.y); break;
+      case 's': act(Action::MOVE, 0, kManualMove.y); break;
       case 'd': act(Action::MOVE, kManualMove.x, 0); break;
       case 'f': act(Action::FIRE, 0, 0); break;
       }
