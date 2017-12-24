@@ -4,9 +4,9 @@
 #include <thread>
 
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 
 #include "robot.h"
-#include "logging.h"
 
 DEFINE_bool(interactive, true, "Run repl?");
 

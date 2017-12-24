@@ -3,7 +3,7 @@
 #include <boost/bind.hpp>
 #include <mutex>
 
-#include "logging.h"
+#include <glog/logging.h>
 
 namespace {
 
@@ -121,7 +121,7 @@ void WaitReadyForever(boost::asio::serial_port& port) {
 std::ostream& operator<<(std::ostream& os, const AsBytes& b) {
   char buf[4];
   for (char c : b.s) {
-    QCHECK(snprintf(buf, sizeof(buf), "%02x ", c) == 3);
+    CHECK(snprintf(buf, sizeof(buf), "%02x ", c) == 3);
     os << buf;
   }
   return os;

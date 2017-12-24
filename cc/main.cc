@@ -82,7 +82,7 @@ public:
   using Mat = cv::Mat;
 
   Recognizer(Robot *robot) : robot_(robot) {
-    QCHECK(face_detector_->load(kFaceCascadeFile))
+    CHECK(face_detector_->load(kFaceCascadeFile))
         << " error loading " << kFaceCascadeFile;
   }
 
@@ -119,9 +119,9 @@ public:
 
   std::vector<Action> DetermineAction(cv::Mat &input_img,
                                       const cv::Point &mouth) {
-    QCHECK(input_img.rows == kImageSize.y)
+    CHECK(input_img.rows == kImageSize.y)
         << "rows=" << input_img.rows << " expected_height=" << kImageSize.y;
-    QCHECK(input_img.cols == kImageSize.x) << "cols=" << input_img.cols
+    CHECK(input_img.cols == kImageSize.x) << "cols=" << input_img.cols
                                            << " expected_with=" << kImageSize.x;
     constexpr int kTargetSize = 20;
     const cv::Rect target(kTarget - kTargetSize / 2,
@@ -305,6 +305,8 @@ void DetectWebcam(CaptureSource* capture, Recognizer *recognizer, Robot* robot) 
 
 int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InstallFailureSignalHandler();
+  google::InitGoogleLogging(argv[0]);
   std::unique_ptr<Robot> robot = Robot::FromFlags();
   Recognizer recognizer(robot.get());
   if (FLAGS_raspicam) {

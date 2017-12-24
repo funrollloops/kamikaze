@@ -3,12 +3,14 @@ project( kamikaze )
 
 # Dependencies
 # TODO: Fix this dependency to be auto-configured and installed
+
+set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
+list(APPEND CMAKE_PREFIX_PATH ${THIRD_PARTY})
 list(APPEND CMAKE_PREFIX_PATH "/home/sagarm/code/opencv/install-tree/" )
+string(REPLACE ";" ":" CMAKE_PREFIX_PATH_STR "${CMAKE_PREFIX_PATH}")
 find_package( OpenCV 3.2 REQUIRED )
 
 include(ExternalProject)
-
-set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
 
 function(Dependency name GIT_REPOSITORY GIT_TAG)
   ExternalProject_Add(${name}
@@ -16,10 +18,10 @@ function(Dependency name GIT_REPOSITORY GIT_TAG)
     GIT_TAG ${GIT_TAG}
     INSTALL_DIR ${THIRD_PARTY}
     DEPENDS ${ARGN}
-    CONFIGURE_COMMAND cmake -DCMAKE_BUILD_TYPE=Release -GNinja -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> <SOURCE_DIR>
+    CONFIGURE_COMMAND CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR} cmake -DCMAKE_BUILD_TYPE=Release -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> <SOURCE_DIR>
     UPDATE_COMMAND ""
-    BUILD_COMMAND ninja -C <BINARY_DIR>
-    INSTALL_COMMAND ninja -C <BINARY_DIR> install)
+    BUILD_COMMAND cmake --build <BINARY_DIR>
+    INSTALL_COMMAND cmake --build <BINARY_DIR> -- install)
 endfunction()
 
 Dependency(external_gflags

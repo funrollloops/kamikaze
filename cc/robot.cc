@@ -5,7 +5,7 @@
 #include <linux/spi/spidev.h>
 #include <linux/types.h>
 
-#include "logging.h"
+#include <glog/logging.h>
 
 DEFINE_string(tty, "", "Path to Arduino device node. If not given, use fake.");
 DEFINE_string(spi, "", "Path to spi device node. If not given, use fake.");
@@ -17,9 +17,7 @@ std::unique_ptr<Robot> Robot::FromFlags() {
   } else if (!FLAGS_tty.empty()) {
     return std::make_unique<RobotSerial>(FLAGS_tty, 9600);
   }
-  std::cerr
-      << "warning: using fake robot. Provide --tty to connect to an arduino."
-      << std::endl;
+  LOG(ERROR) << "using fake robot. Provide --tty to connect to an arduino.";
   return std::make_unique<NoOpRobot>();
 }
 
@@ -60,16 +58,16 @@ void RobotSerial::fire(std::chrono::milliseconds time) {
 
 RobotLinuxSPI::RobotLinuxSPI(const std::string& device, int baud) {
   fd_ = open(device.c_str(), O_RDWR);
-  QCHECK(fd_ >= 0) << " failed to open device: " << device;
+  CHECK(fd_ >= 0) << " failed to open device: " << device;
   uint8_t mode = 0;
   uint8_t bits = 8;
   uint32_t speed = 100000;
-  QCHECK(ioctl(fd_, SPI_IOC_WR_MODE, &mode) != -1);
-	QCHECK(ioctl(fd_, SPI_IOC_RD_MODE, &mode) != -1);
-	QCHECK(ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &bits) != -1);
-	QCHECK(ioctl(fd_, SPI_IOC_RD_BITS_PER_WORD, &bits) != -1);
-	QCHECK(ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) != -1);
-	QCHECK(ioctl(fd_, SPI_IOC_RD_MAX_SPEED_HZ, &speed) != -1);
+  CHECK(ioctl(fd_, SPI_IOC_WR_MODE, &mode) != -1);
+	CHECK(ioctl(fd_, SPI_IOC_RD_MODE, &mode) != -1);
+	CHECK(ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &bits) != -1);
+	CHECK(ioctl(fd_, SPI_IOC_RD_BITS_PER_WORD, &bits) != -1);
+	CHECK(ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) != -1);
+	CHECK(ioctl(fd_, SPI_IOC_RD_MAX_SPEED_HZ, &speed) != -1);
   std::cout << "SPI configured to mode=" << +mode << " bits=" << +bits
             << " speed=" << speed << "Hz" << std::endl;
 }
@@ -118,7 +116,7 @@ std::string RobotLinuxSPI::sendMessage(const void* send, uint16_t len) {
     .speed_hz = 0,
     .delay_usecs = 500,
   };
-  QCHECK(ioctl(fd_, SPI_IOC_MESSAGE(1), &tr) >= 1);
+  CHECK(ioctl(fd_, SPI_IOC_MESSAGE(1), &tr) >= 1);
   std::cout
       << "i2c r/w: "
       << AsBytes(std::string(reinterpret_cast<const char*>(send), len))
