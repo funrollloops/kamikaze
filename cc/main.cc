@@ -8,9 +8,9 @@
 #include <vector>
 
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 
 #include "capture.h"
-#include "logging.h"
 #include "operators.h"
 #include "robot.h"
 

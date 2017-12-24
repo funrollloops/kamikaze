@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iosfwd>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <memory>
 #include <string>
 #include <thread>
@@ -66,10 +67,13 @@ public:
     return pos_;
   }
   virtual void moveTo(Pos pos) {
+    VLOG(2) << "moveTo(" << pos.first << ", " << pos.second << ")" << std::endl;
     tell();
     target_ = pos;
   }
   void fire(std::chrono::milliseconds time) final {
+    std::cout << "fire(" << (time / std::chrono::milliseconds(1)) << " ms)"
+              << std::endl;
     std::this_thread::sleep_for(time);
   }
 

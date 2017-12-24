@@ -4,9 +4,3 @@
 [submodule "arduino/arduino-cmake"]
 	path = arduino/arduino-cmake
 	url = https://github.com/queezythegreat/arduino-cmake.git
-[submodule "cc/gflags"]
-	path = cc/gflags
-	url = https://github.com/gflags/gflags.git
-[submodule "cc/raspicam"]
-	path = cc/raspicam
-	url = https://github.com/cedricve/raspicam.git
