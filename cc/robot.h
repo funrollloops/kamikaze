@@ -24,6 +24,9 @@ public:
     bool operator!=(const Pos& b) const {
       return !(*this == b);
     }
+    Pos add(int16_t x, int16_t y) const {
+      return Pos{int16_t(first + x), int16_t(second + y)};
+    }
   } __attribute__((__packed__));
   virtual Pos tell() = 0;
   virtual void moveTo(Pos pos) = 0;
