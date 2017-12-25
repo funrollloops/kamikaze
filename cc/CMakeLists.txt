@@ -17,6 +17,7 @@ function(Dependency name GIT_REPOSITORY GIT_TAG)
     INSTALL_DIR ${THIRD_PARTY}
     UPDATE_COMMAND ""
     CMAKE_ARGS
+      -Wno-dev
       -DCMAKE_BUILD_TYPE=Release
       -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     ${ARGN})
@@ -25,15 +26,27 @@ endfunction()
 Dependency(external_gflags
   GIT_REPOSITORY "https://github.com/gflags/gflags.git"
   GIT_TAG "v2.2.1")
+add_library( gflags STATIC IMPORTED )
+set_target_properties( gflags PROPERTIES
+  IMPORTED_LOCATION_NOCONFIG "${THIRD_PARTY}/lib/libgflags.a")
+add_dependencies( gflags external_glog )
 
 Dependency(external_glog
   GIT_REPOSITORY "https://github.com/google/glog.git"
   GIT_TAG "v0.3.5"
   DEPENDS external_gflags)
+add_library( glog STATIC IMPORTED )
+set_target_properties( glog PROPERTIES
+  IMPORTED_LOCATION_NOCONFIG "${THIRD_PARTY}/lib/libglog.a")
+add_dependencies( glog external_glog )
 
 Dependency(external_raspicam
   GIT_REPOSITORY "https://github.com/cedricve/raspicam.git"
   GIT_TAG "3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee")
+add_library( raspicam_cv SHARED IMPORTED )
+set_target_properties( raspicam_cv PROPERTIES
+  IMPORTED_LOCATION_NOCONFIG "${THIRD_PARTY}/lib/libraspicam_cv.so")
+add_dependencies( raspicam_cv external_raspicam )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -O2 -Wall -Werror")
 include_directories( ${OpenCV_INCLUDE_DIRS} ${THIRD_PARTY}/include )
@@ -44,15 +57,12 @@ add_library( arduinoio STATIC arduinoio.cc )
 target_link_libraries ( arduinoio pthread boost_system )
 
 add_library( robot STATIC robot.cc )
-add_dependencies( robot external_gflags external_glog )
 target_link_libraries( robot arduinoio gflags glog )
 
 add_executable( kamikaze main.cc )
 target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot raspicam_cv gflags glog)
-add_dependencies( kamikaze external_raspicam external_glog external_gflags )
 
 add_executable( robot_test robot_test.cc )
 target_link_libraries( robot_test robot gflags glog )
-add_dependencies( robot_test external_gflags external_glog )
 
 find_package( Threads )
