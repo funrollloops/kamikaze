@@ -74,7 +74,6 @@ std::ostream& operator<<(std::ostream &os, Action action) {
              << " move_to=" << action.move_to.value_or(Robot::Pos{-1, -1});
 }
 
-#if 0
 std::string GetFileBase() {
   auto now =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -91,7 +90,6 @@ void SaveImage(const std::string &filename,
     const cv::Mat& img) {
   cv::imwrite(filename, img, {cv::IMWRITE_JPEG_OPTIMIZE, 1});
 }
-#endif
 
 class Recognizer {
 public:
@@ -246,13 +244,22 @@ void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
 void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
                   Robot *robot) {
   AsyncCaptureSource::LatestImage latest;
+  auto fire = [&]() {
+    if (FLAGS_save_directory.empty()) {
+      robot->fire(kFireTime);
+      return;
+    }
+    const std::string filebase = GetFileBase();
+    SaveImage(filebase + "_annotated.jpg", latest.image);
+    robot->fire(kFireTime);
+  };
   for (int key = 0; key != 'q';) {
     latest = capture->next_image();
     if (optional<Action> action =
             recognizer->Detect(latest.timestamp, latest.pos, latest.image)) {
       switch (action->action) {
       case Action::MOVE: robot->moveTo(*action->move_to); break;
-      case Action::FIRE: robot->fire(kFireTime); break;
+      case Action::FIRE: fire(); break;
       }
     }
     key = cv::waitKey(1000 / 30);
@@ -264,7 +271,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     case 'a': robot->moveTo(robot->tell().add(-kManualMove, 0)); break;
     case 's': robot->moveTo(robot->tell().add(0, kManualMove)); break;
     case 'd': robot->moveTo(robot->tell().add(kManualMove, 0)); break;
-    case 'f': robot->fire(kFireTime); break;
+    case 'f': fire(); break;
     }
   }
 }
