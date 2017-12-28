@@ -1,3 +1,6 @@
+#ifndef __BLASTER_OPERATORS_H__
+#define __BLASTER_OPERATORS_H__
+
 #include <opencv2/opencv.hpp>
 
 cv::Size operator/(cv::Size s, int d) {
@@ -37,3 +40,4 @@ double sqdist(cv::Point a, cv::Point b) {
   return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 }
 
+#endif

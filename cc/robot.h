@@ -1,3 +1,6 @@
+#ifndef __BLASTER_ROBOT_H__
+#define __BLASTER_ROBOT_H__
+
 #include <stdio.h>
 
 #include <chrono>
@@ -109,3 +112,5 @@ private:
 
   int fd_;
 };
+
+#endif

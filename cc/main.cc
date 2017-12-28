@@ -1,12 +1,8 @@
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <ctime>
 #include <experimental/optional>
-#include <experimental/string_view>
 #include <iostream>
-#include <mutex>
-#include <thread>
 #include <vector>
 
 #include <gflags/gflags.h>
@@ -29,7 +25,6 @@ DEFINE_string(save_directory, "", "Enable preview window.");
 namespace {
 using std::experimental::optional;
 using std::experimental::nullopt;
-using std::experimental::string_view;
 
 constexpr char kFaceCascadeFile[] =
     "../haarcascades/haarcascade_frontalface_default.xml";
@@ -230,12 +225,6 @@ private:
       new cv::CascadeClassifier};
 };
 
-struct LatestImage {
-  time_point timestamp;
-  Robot::Pos pos;
-  cv::Mat image;
-};
-
 void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
   cv::Mat image;
   for (int i = 0; i < argc; ++i) {
@@ -254,71 +243,30 @@ void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
   }
 }
 
-void DetectWebcam(CaptureSource *capture, Recognizer *recognizer,
+void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
                   Robot *robot) {
-  std::mutex mu;
-  std::condition_variable latest_image_cv;
-  LatestImage latest_image;
-  std::atomic<bool> done(false);
-  bool latest_image_ready = false;
-
-  std::thread capture_thread([&] {
-    while (!done.load(std::memory_order_relaxed)) {
-      cv::Mat image;
-      if (!capture->grab()) {  // Defer decoding until after we calculate the timestamp.
-        std::cerr << "error grabbing from --webcam=" << FLAGS_webcam
-                  << std::endl;
-      } else {
-        time_point capture_time = now();
-        auto pos = robot->tell();
-        if (!capture->retrieve(&image)) {
-          std::cerr << "error retrieving from --webcam=" << FLAGS_webcam
-                    << std::endl;
-        }
-        std::unique_lock<std::mutex> lock(mu);
-        latest_image.timestamp = capture_time;
-        latest_image.pos = pos;
-        latest_image.image = image;
-        latest_image_ready = true;
-        lock.unlock();
-        latest_image_cv.notify_one();
+  AsyncCaptureSource::LatestImage latest;
+  for (int key = 0; key != 'q';) {
+    latest = capture->next_image();
+    if (optional<Action> action =
+            recognizer->Detect(latest.timestamp, latest.pos, latest.image)) {
+      switch (action->action) {
+      case Action::MOVE: robot->moveTo(*action->move_to); break;
+      case Action::FIRE: robot->fire(kFireTime); break;
       }
     }
-  });
-
-  std::thread detect_thread([&] {
-    LatestImage latest;
-    for (int key = 0; key != 'q';) {
-      {
-        std::unique_lock<std::mutex> lock(mu);
-        latest_image_cv.wait(lock, [&] { return latest_image_ready; });
-        latest = std::move(latest_image);
-        latest_image_ready = false;
-      }
-      if (optional<Action> action =
-              recognizer->Detect(latest.timestamp, latest.pos, latest.image)) {
-        switch (action->action) {
-        case Action::MOVE: robot->moveTo(*action->move_to); break;
-        case Action::FIRE: robot->fire(kFireTime); break;
-        }
-      }
-      key = cv::waitKey(1000 / 30);
-      while (key == 'p')
-        key = cv::waitKey(0); // Wait for another key to be pressed.
-      const int16_t kManualMove = kFovInSteps.x / 4;
-      switch (key) {
-      case 'w': robot->moveTo(robot->tell().add(0, -kManualMove)); break;
-      case 'a': robot->moveTo(robot->tell().add(-kManualMove, 0)); break;
-      case 's': robot->moveTo(robot->tell().add(0, kManualMove)); break;
-      case 'd': robot->moveTo(robot->tell().add(kManualMove, 0)); break;
-      case 'f': robot->fire(kFireTime); break;
-      }
+    key = cv::waitKey(1000 / 30);
+    while (key == 'p')
+      key = cv::waitKey(0); // Wait for another key to be pressed.
+    const int16_t kManualMove = kFovInSteps.x / 4;
+    switch (key) {
+    case 'w': robot->moveTo(robot->tell().add(0, -kManualMove)); break;
+    case 'a': robot->moveTo(robot->tell().add(-kManualMove, 0)); break;
+    case 's': robot->moveTo(robot->tell().add(0, kManualMove)); break;
+    case 'd': robot->moveTo(robot->tell().add(kManualMove, 0)); break;
+    case 'f': robot->fire(kFireTime); break;
     }
-    done = true;
-  });
-
-  detect_thread.join();
-  capture_thread.join();
+  }
 }
 
 }  // namespace
@@ -327,14 +275,20 @@ int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InstallFailureSignalHandler();
   google::InitGoogleLogging(argv[0]);
+  std::unique_ptr<CaptureSource> source;
+  if (FLAGS_raspicam) {
+    source =
+        std::make_unique<RaspiCamCaptureSource>(kImageSize.x, kImageSize.y);
+  } else if (argc == 1) {
+    source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
+                                                   kImageSize.y);
+  }
+
   std::unique_ptr<Robot> robot = Robot::FromFlags();
   Recognizer recognizer;
-  if (FLAGS_raspicam) {
-    RaspiCamCaptureSource raspicam(kImageSize.x, kImageSize.y);
-    DetectWebcam(&raspicam, &recognizer, robot.get());
-  } else if (argc == 1) {
-    WebcamCaptureSource webcam(FLAGS_webcam, kImageSize.x, kImageSize.y);
-    DetectWebcam(&webcam, &recognizer, robot.get());
+  if (source) {
+    AsyncCaptureSource async_source(robot.get(), std::move(source));
+    DetectWebcam(&async_source, &recognizer, robot.get());
   } else {
     DetectImages(&recognizer, robot.get(), argc - 1, argv + 1);
   }

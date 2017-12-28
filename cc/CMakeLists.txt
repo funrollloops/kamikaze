@@ -59,8 +59,11 @@ target_link_libraries ( arduinoio pthread boost_system )
 add_library( robot STATIC robot.cc )
 target_link_libraries( robot arduinoio gflags glog )
 
+add_library( capture STATIC capture.cc )
+target_link_libraries( capture raspicam_cv )
+
 add_executable( kamikaze main.cc )
-target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot raspicam_cv gflags glog)
+target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot capture gflags glog)
 
 add_executable( robot_test robot_test.cc )
 target_link_libraries( robot_test robot gflags glog )
