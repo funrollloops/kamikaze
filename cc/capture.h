@@ -20,12 +20,13 @@ class CaptureSource {
     virtual bool grab() = 0;
     virtual bool retrieve(cv::Mat *image) = 0;
     virtual std::string describe() = 0;
+    virtual cv::Size size() const = 0;
 };
 
 class WebcamCaptureSource : public CaptureSource {
   public:
     WebcamCaptureSource(int webcam, int width, int height)
-        : webcam_(webcam), capture_(webcam) {
+        : webcam_(webcam), capture_(webcam), size_(width, height) {
       // A return value of false doesn't mean the prop set failed!
       capture_.set(cv::CAP_PROP_FRAME_WIDTH, width);
       capture_.set(cv::CAP_PROP_FRAME_HEIGHT, height);
@@ -38,15 +39,17 @@ class WebcamCaptureSource : public CaptureSource {
       buf << "--webcam=" << webcam_;
       return buf.str();
     }
+    cv::Size size() const override { return size_; }
 
   private:
     const int webcam_;
     cv::VideoCapture capture_;
+    const cv::Size size_;
 };
 
 class RaspiCamCaptureSource : public CaptureSource {
   public:
-    RaspiCamCaptureSource(int width, int height) {
+    RaspiCamCaptureSource(int width, int height): size_(width, height) {
       capture_.set(cv::CAP_PROP_FRAME_WIDTH, width);
       capture_.set(cv::CAP_PROP_FRAME_HEIGHT, height);
       CHECK(capture_.open()) << " failed to open raspicam";
@@ -61,9 +64,11 @@ class RaspiCamCaptureSource : public CaptureSource {
       return true;
     }
     std::string describe() override { return "--raspicam"; }
+    cv::Size size() const override { return size_; }
 
   private:
     raspicam::RaspiCam_Cv capture_;
+    const cv::Size size_;
 };
 
 class AsyncCaptureSource {

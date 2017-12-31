@@ -20,7 +20,9 @@ DEFINE_bool(
     wait_between_images, true,
     "When doing detection on images, set to true to wait after each image.");
 DEFINE_bool(preview, true, "Enable preview window.");
-DEFINE_string(save_directory, "", "Enable preview window.");
+DEFINE_string(save_directory, "",
+              "Enable saving pictures/video and plath them in this directory.");
+DEFINE_bool(save_video, true, "Enable saving video.");
 
 namespace {
 using std::experimental::optional;
@@ -53,6 +55,7 @@ static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
 // Movement.
 static const cv::Point kFovInSteps(600, 550);
 static constexpr int kMinStep = 4;
+static constexpr std::chrono::seconds kExtraVideoTime(2);
 
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
 time_point now() { return std::chrono::high_resolution_clock::now(); }
@@ -250,8 +253,18 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       return;
     }
     const std::string filebase = GetFileBase();
-    SaveImage(filebase + "_annotated.jpg", latest.image);
+    SaveImage(filebase + "_0_annotated.jpg", latest.image);
+    optional<AsyncCaptureSource::CaptureScope> capture_control;
+    if (FLAGS_save_video) {
+      capture_control.emplace(capture->StartCapture(filebase + ".mp4"));
+    }
+    SaveImage(filebase + "_1_before.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     robot->fire(kFireTime);
+    SaveImage(filebase + "_2_during.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    SaveImage(filebase + "_3_after.jpg", capture->next_image().image);
+    if (capture_control) std::this_thread::sleep_for(kExtraVideoTime);
   };
   for (int key = 0; key != 'q';) {
     latest = capture->next_image();

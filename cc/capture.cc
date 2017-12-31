@@ -1,5 +1,7 @@
 #include "capture.h"
 
+const static auto kFourCC = cv::VideoWriter::fourcc('M', 'P', 'E', 'G');
+
 AsyncCaptureSource::AsyncCaptureSource(Robot *robot,
                                        std::unique_ptr<CaptureSource> source)
     : robot_(*CHECK_NOTNULL(robot)), source_(std::move(CHECK_NOTNULL(source))),
@@ -26,9 +28,12 @@ void AsyncCaptureSource::BackgroundTask() {
                    << std::endl;
       }
       std::unique_lock<std::mutex> lock(mu_);
+      if (writer_) {
+        writer_->write(image);
+      }
       latest_image_.timestamp = capture_time;
       latest_image_.pos = pos;
-      latest_image_.image = image;
+      latest_image_.image = std::move(image);
       new_image_ready_ = true;
       lock.unlock();
       new_image_ready_cv_.notify_one();
@@ -45,10 +50,15 @@ AsyncCaptureSource::LatestImage AsyncCaptureSource::next_image() {
 
 AsyncCaptureSource::CaptureScope
 AsyncCaptureSource::StartCapture(const std::string &filename) {
+  std::unique_lock<std::mutex> lock(mu_);
   CHECK(!writer_) << "Nested capture scopes are not supported";
+  writer_.emplace(filename, kFourCC, /*fps=*/15, source_->size());
+  LOG(WARNING) << "writer.isOpened()=" << writer_->isOpened();
   return CaptureScope(this);
 }
 
 void AsyncCaptureSource::FinishCapture() {
+  std::unique_lock<std::mutex> lock(mu_);
   CHECK(writer_) << "Tried to FinishCapture when none was in progress.";
+  writer_->release();
 }
