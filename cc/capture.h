@@ -30,6 +30,7 @@ class WebcamCaptureSource : public CaptureSource {
       // A return value of false doesn't mean the prop set failed!
       capture_.set(cv::CAP_PROP_FRAME_WIDTH, width);
       capture_.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+      capture_.set(cv::CAP_PROP_FPS, 60);
     }
     bool isOpened() override { return capture_.isOpened(); }
     bool grab() override { return capture_.grab(); }
