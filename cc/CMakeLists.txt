@@ -24,6 +24,7 @@ CMakeDependency(OpenCV
     -DBUILD_TBB=OFF
     -DWITH_TIFF=OFF
     -DWITH_IPP=OFF
+    -DWITH_FFMPEG=ON
     -DWITH_WEBP=OFF
     -DWITH_TBB=OFF
     -DWITH_V4L=ON
@@ -71,7 +72,7 @@ ExternalProject_Get_Property(raspicam INSTALL_DIR)
 CMakeDependency(src
     -Draspicam_DIR=${INSTALL_DIR}/lib/cmake
   DOWNLOAD_COMMAND ""
-  INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+  INSTALL_DIR ${CMAKE_BINARY_DIR}
   BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/src"
   INSTALL_COMMAND ""

@@ -1,6 +1,6 @@
 #include "capture.h"
 
-const static auto kFourCC = cv::VideoWriter::fourcc('M', 'P', 'E', 'G');
+const static auto kFourCC = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
 
 AsyncCaptureSource::AsyncCaptureSource(Robot *robot,
                                        std::unique_ptr<CaptureSource> source)
@@ -53,7 +53,7 @@ AsyncCaptureSource::StartCapture(const std::string &filename) {
   std::unique_lock<std::mutex> lock(mu_);
   CHECK(!writer_) << "Nested capture scopes are not supported";
   writer_.emplace(filename, kFourCC, /*fps=*/15, source_->size());
-  LOG(WARNING) << "writer.isOpened()=" << writer_->isOpened();
+  CHECK(writer_->isOpened());
   return CaptureScope(this);
 }
 

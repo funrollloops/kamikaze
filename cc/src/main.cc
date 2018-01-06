@@ -256,7 +256,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     SaveImage(filebase + "_0_annotated.jpg", latest.image);
     optional<AsyncCaptureSource::CaptureScope> capture_control;
     if (FLAGS_save_video) {
-      capture_control.emplace(capture->StartCapture(filebase + ".mp4"));
+      capture_control.emplace(capture->StartCapture(filebase + ".avi"));
     }
     SaveImage(filebase + "_1_before.jpg", capture->next_image().image);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
