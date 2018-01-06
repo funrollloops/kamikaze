@@ -49,19 +49,22 @@ CMakeDependency(OpenCV
     -DWITH_CUDA=OFF
     -DWITH_CUFFT=OFF
     -DWITH_CUBLAS=OFF
-  #URL "https://github.com/opencv/opencv/archive/3.2.0.zip"
-  URL "/home/sagarm/Downloads/opencv-3.2.0.zip"
-  URL_MD5 "bfc6a261eb069b709bcfe7e363ef5899")
+  URL "https://github.com/opencv/opencv/archive/3.2.0.tar.gz"
+  UPDATE_COMMAND ""
+  URL_MD5 1ea44a1d98c126ad40079d8eb914a72e)
 
 CMakeDependency(gflags
-  URL "https://github.com/gflags/gflags/archive/v2.2.1.zip")
+  URL "https://github.com/gflags/gflags/archive/v2.2.1.zip"
+  UPDATE_COMMAND "")
 
 CMakeDependency(glog
   URL "https://github.com/google/glog/archive/v0.3.5.zip"
+  UPDATE_COMMAND ""
   DEPENDS gflags)
 
 CMakeDependency(raspicam
   URL "https://github.com/cedricve/raspicam/archive/3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee.zip"
+  UPDATE_COMMAND ""
   DEPENDS OpenCV)
 
 ExternalProject_Get_Property(raspicam INSTALL_DIR)
