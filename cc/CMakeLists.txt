@@ -75,5 +75,6 @@ CMakeDependency(src
   INSTALL_DIR ${CMAKE_BINARY_DIR}
   BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/src"
-  INSTALL_COMMAND ""
+  INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test ${CMAKE_BINARY_DIR}/
+  OUTPUT kamikaze robot_test
   DEPENDS OpenCV gflags glog raspicam)

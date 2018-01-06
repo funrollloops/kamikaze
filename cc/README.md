@@ -17,8 +17,8 @@ ninja -C build/src-build robot_test && build/src-build/robot_test
 
 The main program is `kamikaze`; run with all features enabled:
 ```bash
-ninja -C build/src-build kamikaze &&
-build/src-build/kamikaze --logtostderr \
+ninja -C build kamikaze &&
+build/kamikaze --logtostderr \
   --spi /dev/spidev0.0 \
   --save_directory=$(pwd)/output --save_video
 ```
