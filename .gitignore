@@ -1,2 +1,3 @@
 shots/
 **/*.pyc
+uploads.db
