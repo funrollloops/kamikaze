@@ -9,10 +9,13 @@ log = logging.getLogger(__name__)
 
 class FileCollector(object):
   DEFAULT_PATTERNS = [
-    re.compile('(.*)_0_annotated.jpg'),
-    re.compile('(.*)_1_before.jpg'),
-    re.compile('(.*)_2_during.jpg'),
-    re.compile('(.*)_3_after.jpg'),
+    re.compile('(.*)\+annotated.jpg'),
+    re.compile('(.*)\+0000ms.jpg'),
+    re.compile('(.*)\+0500ms.jpg'),
+    re.compile('(.*)\+1000ms.jpg'),
+    re.compile('(.*)\+1500ms.jpg'),
+    re.compile('(.*)\+2000ms.jpg'),
+    re.compile('(.*)\+2500ms.jpg'),
   ]
 
   def __init__(self, watch_dir, patterns=None):
@@ -29,6 +32,11 @@ class FileCollector(object):
     for event in i.event_gen():
       if event is not None:
         (header, type_names, watch_path, filename) = event
+        if 'IN_CLOSE_WRITE' not in type_names:
+          # Only process files that have "finished writing" to exclude when the
+          # files open up again for boto upload.
+          continue
+
         path = os.path.join(watch_path, filename)
         for rgx in self.patterns:
           md = rgx.search(path)
