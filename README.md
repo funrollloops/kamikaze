@@ -33,3 +33,15 @@ Recognition will run faster if you build OpenCV as suggested in `cc/README.md`, 
 ## To make things move
 
 Pass the `--nofake` flag.
+
+## To run the uploader
+
+The uploader code lives in `uploader/`. Currently, it only monitors the shots
+directory and prints out the files that it would have uploaded. To run it, first
+install the requirements in uploader/requirements.txt:
+
+`$ sudo pip install -r uploader/requirements.txt`
+
+Then run it like a normal python script:
+
+`$ python uploader/uploader.py`
