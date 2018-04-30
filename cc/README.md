@@ -30,6 +30,11 @@ cmake .  # In-source build.
 make
 ```
 
+Install the systemd service with
+```bash
+sudo systemctl enable $(pwd)/kamikaze-controller.service
+```
+
 Test the Arduino communication code with `robot_test`:
 ```bash
 g++ -std=c++1z robot_test.cc robot.cc arduinoio.cc -o robot_test -lboost_system
