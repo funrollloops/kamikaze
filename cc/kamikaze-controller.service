@@ -1,0 +1,12 @@
+[Unit]
+Description=Kamikaze Controller
+After=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/kamikaze/cc
+ExecStart=/home/pi/kamikaze/cc/build/kamikaze --spi /dev/spidev0.0 --raspicam --nopreview --save_directory=/home/pi/shots
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
