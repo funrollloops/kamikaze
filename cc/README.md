@@ -24,10 +24,15 @@ make
 make install
 ```
 
-Then build here with
+Then build and run here with
 ```bash
-cmake .  # In-source build.
-make
+mkdir build
+cd build
+cmake -GNinja ..  # In-source build.
+cd ..
+ninja -C build kamikaze
+build/kamikaze --help  # To see options.
+build/kamikaze --spi /dev/spidev0.0 --raspicam
 ```
 
 Install the systemd service with
