@@ -11,7 +11,6 @@ macro(CMakeDependency name)
       -Wno-dev
       -DCMAKE_BUILD_TYPE=Release
       -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
-      -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     ${ARGN})
   ExternalProject_Get_Property(${name} INSTALL_DIR)
   list(APPEND CMAKE_PREFIX_PATH ${INSTALL_DIR})
@@ -67,14 +66,19 @@ CMakeDependency(raspicam
   URL "https://github.com/cedricve/raspicam/archive/3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee.zip"
   UPDATE_COMMAND ""
   DEPENDS OpenCV)
-
 ExternalProject_Get_Property(raspicam INSTALL_DIR)
-CMakeDependency(src
-    -Draspicam_DIR=${INSTALL_DIR}/lib/cmake
+set(raspicam_DIR ${INSTALL_DIR}/lib/cmake)
+
+ExternalProject_Add(
+  src
   DOWNLOAD_COMMAND ""
+  LIST_SEPARATOR |
+  CMAKE_ARGS
+    -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
+    -Draspicam_DIR=${raspicam_DIR}
   INSTALL_DIR ${CMAKE_BINARY_DIR}
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/src
   BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/src"
-  INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test ${CMAKE_BINARY_DIR}/
+  INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
   OUTPUT kamikaze robot_test
   DEPENDS OpenCV gflags glog raspicam)
