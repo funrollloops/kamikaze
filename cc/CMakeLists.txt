@@ -80,5 +80,14 @@ ExternalProject_Add(
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/src
   BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
-  OUTPUT kamikaze robot_test
   DEPENDS OpenCV gflags glog raspicam)
+
+add_custom_target(
+  kamikaze
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/src-build --target kamikaze
+  DEPENDS src)
+
+add_custom_target(
+  robot_test
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/src-build --target robot_test
+  DEPENDS src)
