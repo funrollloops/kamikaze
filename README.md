@@ -42,6 +42,9 @@ install the requirements in uploader/requirements.txt:
 
 `$ sudo pip install -r uploader/requirements.txt`
 
-Then run it like a normal python script:
+Next, obtain a copy of aws_credentials.secret, which contains the AWS
+credentials in the boto3 format.
 
-`$ python uploader/uploader.py`
+Then run it with an environment variable, like a normal python script:
+
+`AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py`
