@@ -34,8 +34,8 @@ WHITE = (255, 255, 255)
 latest_img = None
 
 
-def save_image(img, suffix=""):
-  cv2.imwrite('shots/' + time.strftime('%a - %H_%M_%S') + suffix + '.jpg', img)
+def save_image(img, basename):
+  cv2.imwrite('shots/' + basename + '.jpg', img)
 
 
 FIRE_TIME_SECS = 0.5
@@ -237,13 +237,19 @@ class Recognizer(object):
     elif dir is CALIBRATE:
       self.robot.calibrate()
     elif dir is FIRE:
-      save_image(img, "_0_annotated")
-      save_image(latest_img.get(), "_1_before")
-      time.sleep(.5)
+      basename = time.strftime('%a - %H_%M_%S')
+      save_image(img, basename + "+annotated")
+      save_image(latest_img.get(), basename + "+0000ms")
       self.robot.fire(FIRE_TIME_SECS)
-      save_image(latest_img.get(), "_2_during")
-      time.sleep(1.1)
-      save_image(latest_img.get(), "_3_after")
+      save_image(latest_img.get(), basename + "+0500ms")
+      time.sleep(0.5)
+      save_image(latest_img.get(), basename + "+1000ms")
+      time.sleep(0.5)
+      save_image(latest_img.get(), basename + "+1500ms")
+      time.sleep(0.5)
+      save_image(latest_img.get(), basename + "+2000ms")
+      time.sleep(0.5)
+      save_image(latest_img.get(), basename + "+2500ms")
     self.last_action_time = time.time()
 
 

@@ -259,17 +259,23 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       return;
     }
     const std::string filebase = GetFileBase();
-    SaveImage(filebase + "_0_annotated.jpg", latest.image);
+    SaveImage(filebase + "+annotated.jpg", latest.image);
     optional<AsyncCaptureSource::CaptureScope> capture_control;
     if (FLAGS_save_video) {
       capture_control.emplace(capture->StartCapture(filebase + ".mp4"));
     }
-    SaveImage(filebase + "_1_before.jpg", capture->next_image().image);
+    SaveImage(filebase + "+0000ms.jpg", capture->next_image().image);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     robot->fire(kFireTime);
-    SaveImage(filebase + "_2_during.jpg", capture->next_image().image);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-    SaveImage(filebase + "_3_after.jpg", capture->next_image().image);
+    SaveImage(filebase + "+0500ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+1000ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+1500ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+2000ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+2500ms.jpg", capture->next_image().image);
     if (capture_control) std::this_thread::sleep_for(kExtraVideoTime);
   };
   for (int key = 0; key != 'q';) {
