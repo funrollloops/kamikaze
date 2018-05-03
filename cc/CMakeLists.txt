@@ -82,12 +82,13 @@ ExternalProject_Add(
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
   DEPENDS OpenCV gflags glog raspicam)
 
-add_custom_target(
-  kamikaze
-  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/src-build --target kamikaze
-  DEPENDS src)
 
-add_custom_target(
-  robot_test
-  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/src-build --target robot_test
-  DEPENDS src)
+macro(TargetAlias subproject name)
+  add_custom_target(
+    ${name}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/${subproject}-build --target ${name}
+    DEPENDS ${subproject})
+endmacro()
+
+TargetAlias(src kamikaze)
+TargetAlias(src robot_test)
