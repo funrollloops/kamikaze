@@ -23,6 +23,10 @@ DEFINE_bool(preview, true, "Enable preview window.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
 DEFINE_bool(save_video, true, "Enable saving video.");
+DEFINE_uint64(
+    preview_size, 0,
+    "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
+    " 800x600");
 
 namespace {
 using std::experimental::optional;
@@ -39,12 +43,14 @@ static const int kMinConsecutiveOnTargetToFire = 10;
 
 #define FIND_EYES 0
 
+// Preview.
 static const cv::Scalar kBlue(255, 0, 0);
 static const cv::Scalar kGreen(0, 255, 0);
 static const cv::Scalar kRed(0, 0, 255);
 static const cv::Scalar kTeal(255, 255, 0);
 static const cv::Scalar kYellow(0, 255, 255);
 static const cv::Scalar kWhite(255, 255, 255);
+static const char kWindowName[] = "preview";
 
 static const cv::Point kImageSize(1280, 720);
 // Targeting.
@@ -53,7 +59,7 @@ static const cv::Point kTargetCenter(640, 480);
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
 // Movement.
-static const cv::Point kFovInSteps(600, 550);
+static const cv::Point kFovInSteps(500, 450);
 static constexpr int kMinStep = 4;
 static constexpr std::chrono::seconds kExtraVideoTime(2);
 
@@ -143,7 +149,7 @@ public:
                   cv::FONT_HERSHEY_PLAIN, 1, kWhite);
       cv::putText(input_img, line2.str(), cv::Point(0, 40),
                   cv::FONT_HERSHEY_PLAIN, 2, kWhite);
-      cv::imshow("img", input_img);
+      cv::imshow(kWindowName, input_img);
     } else {
       std::cout << line1.str() << "\t" << line2.str() << std::endl;
     }
@@ -253,17 +259,23 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       return;
     }
     const std::string filebase = GetFileBase();
-    SaveImage(filebase + "_0_annotated.jpg", latest.image);
+    SaveImage(filebase + "+annotated.jpg", latest.image);
     optional<AsyncCaptureSource::CaptureScope> capture_control;
     if (FLAGS_save_video) {
       capture_control.emplace(capture->StartCapture(filebase + ".avi"));
     }
-    SaveImage(filebase + "_1_before.jpg", capture->next_image().image);
+    SaveImage(filebase + "+0000ms.jpg", capture->next_image().image);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     robot->fire(kFireTime);
-    SaveImage(filebase + "_2_during.jpg", capture->next_image().image);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-    SaveImage(filebase + "_3_after.jpg", capture->next_image().image);
+    SaveImage(filebase + "+0500ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+1000ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+1500ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+2000ms.jpg", capture->next_image().image);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    SaveImage(filebase + "+2500ms.jpg", capture->next_image().image);
     if (capture_control) std::this_thread::sleep_for(kExtraVideoTime);
   };
   for (int key = 0; key != 'q';) {
@@ -302,6 +314,14 @@ int main(int argc, char **argv) {
   } else if (argc == 1) {
     source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
                                                    kImageSize.y);
+  }
+
+  if (FLAGS_preview) {
+    cv::namedWindow(kWindowName, cv::WINDOW_NORMAL  | cv::WINDOW_OPENGL);
+    if (FLAGS_preview_size) {
+      cv::resizeWindow(kWindowName, FLAGS_preview_size / 10000,
+                       FLAGS_preview % 10000);
+    }
   }
 
   std::unique_ptr<Robot> robot = Robot::FromFlags();

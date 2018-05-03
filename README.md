@@ -33,3 +33,18 @@ Recognition will run faster if you build OpenCV as suggested in `cc/README.md`, 
 ## To make things move
 
 Pass the `--nofake` flag.
+
+## To run the uploader
+
+The uploader code lives in `uploader/`. Currently, it only monitors the shots
+directory and prints out the files that it would have uploaded. To run it, first
+install the requirements in uploader/requirements.txt:
+
+`$ sudo pip install -r uploader/requirements.txt`
+
+Next, obtain a copy of aws_credentials.secret, which contains the AWS
+credentials in the boto3 format.
+
+Then run it with an environment variable, like a normal python script:
+
+`AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py`

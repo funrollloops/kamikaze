@@ -10,9 +10,9 @@ cmake -GNinja ..
 ninja
 ```
 
-Test the Arduino communication code with `robot_test`:
+Install the systemd service with
 ```bash
-ninja -C build/src-build robot_test && build/src-build/robot_test
+sudo systemctl enable $(pwd)/kamikaze-controller.service
 ```
 
 The main program is `kamikaze`; run with all features enabled:
@@ -26,3 +26,7 @@ build/kamikaze --logtostderr \
 Raspberry Pi connected to the daughterboard with a flashed Atmega328p (see the
 arduino/ folder).  On a dev machine leave this flag off to stub out all
 daughterboard communication.
+
+Test the Arduino communication code with `robot_test`:
+```bash
+ninja -C build robot_test && build/robot_test
