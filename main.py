@@ -268,7 +268,6 @@ def detect_webcam(recognizer):
       cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE[1])
       while not done[0]:
         _, frame = cap.read()
-        frame = cv2.warpAffine(frame, Mrot, FRAME_SIZE)
         latest_image.put(frame)
     finally:
       cap.release()
