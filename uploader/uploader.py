@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Script that uploads captured blaster JPGs to a central server.
 
 For now, all this does is monitor the shots directory (or the given directory)
