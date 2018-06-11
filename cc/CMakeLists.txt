@@ -5,11 +5,11 @@ include(ExternalProject)
 
 macro(CMakeDependency name)
   ExternalProject_Add(${name}
-    INSTALL_DIR ${THIRD_PARTY}
     LIST_SEPARATOR |
     CMAKE_ARGS
       -Wno-dev
       -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
     ${ARGN})
   ExternalProject_Get_Property(${name} INSTALL_DIR)

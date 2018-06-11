@@ -3,7 +3,7 @@ sudo apt install \
   cmake ninja-build git build-essential pkg-config \
   qt4-default \
   libavcodec-dev libavformat-dev libswscale-dev libavutil-dev \
-  libjpeg-dev
+  libjpeg-dev libboost-all-dev
 mkdir build
 cd build
 cmake -GNinja ..
