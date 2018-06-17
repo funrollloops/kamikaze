@@ -20,6 +20,8 @@ DEFINE_bool(
     wait_between_images, true,
     "When doing detection on images, set to true to wait after each image.");
 DEFINE_bool(preview, true, "Enable preview window.");
+DEFINE_bool(track, true,
+            "Track faces. When disabled, turret moves manually only.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
 DEFINE_bool(save_video, true, "Enable saving video.");
@@ -283,7 +285,9 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     if (optional<Action> action =
             recognizer->Detect(latest.timestamp, latest.pos, latest.image)) {
       switch (action->action) {
-      case Action::MOVE: robot->moveTo(*action->move_to); break;
+      case Action::MOVE:
+        if (FLAGS_track) robot->moveTo(*action->move_to);
+        break;
       case Action::FIRE: fire(); break;
       }
     }
