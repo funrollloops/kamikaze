@@ -71,6 +71,13 @@ void repl(Robot* robot) {
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::unique_ptr<Robot> robot = Robot::FromFlags();
+  std::cout << "commands (hit enter after command):" << std::endl
+            << "t: tell current position" << std::endl
+            << "f <time:int>: fire for time milliseconds" << std::endl
+            << "m <x:int> <y:int>: move to position (x, y)" << std::endl
+            << "s: run test script (move up down left right)" << std::endl
+            << "r <dx:int> <dy:int>: move to relative position (+dx, +dy)"
+            << std::endl;
   if (FLAGS_interactive) {
     repl(robot.get());
   } else {
