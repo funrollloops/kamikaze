@@ -9,8 +9,7 @@ User=autossh
 # -M 0 --> no monitoring
 # -N Just open the connection and do nothing (not interactive)
 # LOCALPORT:IP_ON_EXAMPLE_COM:PORT_ON_EXAMPLE_COM
-ExecStart=/usr/bin/autossh -M 0 -N -q -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" -p 22 -l autossh rsp.d20robotics.com -R 92xx:localhost:22 -i /home/autossh/.ssh/id_rsa
-ExecStop=kill -s KILL autossh
+ExecStart=/usr/bin/autossh -M 0 -N -q -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 22 -l autossh rsp.d20robotics.com -R 92xx:localhost:22 -i /home/autossh/.ssh/id_ed25519
 Restart=on-abort
 
 [Install]
