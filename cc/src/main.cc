@@ -39,6 +39,7 @@ constexpr char kFaceCascadeFile[] =
 constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
 constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
 static const cv::Size kMinFaceSize(50, 50);
+static const cv::Size kMaxFaceSize(100, 100);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
 static const int kMinConsecutiveOnTargetToFire = 5;
@@ -47,6 +48,7 @@ static const int kMinConsecutiveOnTargetToFire = 5;
 
 // Preview.
 static const cv::Scalar kBlue(255, 0, 0);
+static const cv::Scalar kDarkBlue(128, 0, 0);
 static const cv::Scalar kGreen(0, 255, 0);
 static const cv::Scalar kRed(0, 0, 255);
 static const cv::Scalar kTeal(255, 255, 0);
@@ -122,8 +124,12 @@ public:
     std::ostringstream line2;
     auto faces =
         DetectMultiScale(face_detector_.get(), gray_, 1.3, 5, kMinFaceSize);
-    for (const cv::Rect& face : faces) {
-      PlotFeature(input_img, face, kBlue);
+    for (auto face = faces.begin(); face != faces.end();) {
+      bool too_big = face->size().width > kMaxFaceSize.width ||
+                     face->size().height > kMaxFaceSize.height;
+      PlotFeature(input_img, *face, too_big ? kDarkBlue : kBlue);
+      if (too_big) face = faces.erase(face);
+      else ++face;
     }
     PlotFeature(input_img, kTargetArea, kTeal);
     line2 << "pos=" << pos << " ";
