@@ -12,6 +12,7 @@
 #include "capture.h"
 #include "operators.h"
 #include "robot.h"
+#include "robot_from_flags.h"
 
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
@@ -84,6 +85,7 @@ std::ostream& operator<<(std::ostream &os, Action action) {
   }
   LOG(FATAL) << "Tried to log invalid action=" << action.action
              << " move_to=" << action.move_to.value_or(Robot::Pos{-1, -1});
+  __builtin_unreachable();
 }
 
 std::string GetFileBase() {
@@ -329,7 +331,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::unique_ptr<Robot> robot = Robot::FromFlags();
+  std::unique_ptr<Robot> robot = RobotFromFlags();
   Recognizer recognizer;
   if (source) {
     AsyncCaptureSource async_source(robot.get(), std::move(source));

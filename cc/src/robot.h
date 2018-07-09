@@ -5,7 +5,6 @@
 
 #include <chrono>
 #include <iosfwd>
-#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <memory>
 #include <string>
@@ -34,8 +33,6 @@ public:
   virtual Pos tell() = 0;
   virtual void moveTo(Pos pos) = 0;
   virtual void fire(std::chrono::milliseconds time) = 0;
-
-  static std::unique_ptr<Robot> FromFlags();
 };
 
 std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos);

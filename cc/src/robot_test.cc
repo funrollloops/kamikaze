@@ -7,6 +7,7 @@
 #include <glog/logging.h>
 
 #include "robot.h"
+#include "robot_from_flags.h"
 
 DEFINE_bool(interactive, true, "Run repl?");
 
@@ -70,7 +71,7 @@ void repl(Robot* robot) {
 
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  std::unique_ptr<Robot> robot = Robot::FromFlags();
+  std::unique_ptr<Robot> robot = RobotFromFlags();
   std::cout << "commands (hit enter after command):" << std::endl
             << "t: tell current position" << std::endl
             << "f <time:int>: fire for time milliseconds" << std::endl
