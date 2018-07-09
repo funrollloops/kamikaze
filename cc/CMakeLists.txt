@@ -69,6 +69,48 @@ CMakeDependency(raspicam
 ExternalProject_Get_Property(raspicam INSTALL_DIR)
 set(raspicam_DIR ${INSTALL_DIR}/lib/cmake)
 
+CMakeDependency(c-ares
+    -DCARES_SHARED:BOOL=OFF
+    -DCARES_STATIC:BOOL=ON
+    -DCARES_STATIC_PIC:BOOL=ON
+  URL "https://github.com/c-ares/c-ares/archive/cares-1_13_0.zip"
+  URL_MD5 "9ff5c3db721b8450ec577f6823492ac2"
+)
+
+CMakeDependency(protobuf
+    -Dprotobuf_BUILD_TESTS:BOOL=OFF
+    -Dprotobuf_WITH_ZLIB:BOOL=OFF
+    -Dprotobuf_MSVC_STATIC_RUNTIME:BOOL=OFF
+  SOURCE_SUBDIR cmake/
+  URL "https://github.com/google/protobuf/archive/v3.6.0.1.zip"
+  URL_MD5 "0b33849480f5a469ba54b9ec10004e7b"
+)
+ExternalProject_Get_Property(protobuf INSTALL_DIR)
+set(Protobuf_DIR ${INSTALL_DIR}/lib/cmake/protobuf)
+
+# if OPENSSL_ROOT_DIR is set, propagate that hint path to the external projects with OpenSSL dependency.
+set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "")
+if (OPENSSL_ROOT_DIR)
+  set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "-DOPENSSL_ROOT_DIR:PATH=${OPENSSL_ROOT_DIR}")
+endif()
+
+CMakeDependency(grpc
+    -DgRPC_INSTALL:BOOL=ON
+    -DgRPC_BUILD_TESTS:BOOL=OFF
+    -DgRPC_PROTOBUF_PROVIDER:STRING=package
+    -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
+    -DgRPC_ZLIB_PROVIDER:STRING=package
+    -DgRPC_CARES_PROVIDER:STRING=package
+    -Dc-ares_DIR:PATH=${CMAKE_CURRENT_BINARY_DIR}/c-ares/lib/cmake/c-ares
+    -DgRPC_SSL_PROVIDER:STRING=package
+    ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
+    -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/grpc
+  URL "https://github.com/grpc/grpc/archive/v1.13.0.zip"
+  URL_MD5 "25907bbb2ce978b4434008aed98f47ea"
+  DEPENDS c-ares protobuf #zlib
+)
+
+
 ExternalProject_Add(
   src
   DOWNLOAD_COMMAND ""
@@ -76,11 +118,13 @@ ExternalProject_Add(
   CMAKE_ARGS
     -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
     -Draspicam_DIR=${raspicam_DIR}
+    -DProtobuf_DIR=${Protobuf_DIR}
   INSTALL_DIR ${CMAKE_BINARY_DIR}
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/src
   BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
-  DEPENDS OpenCV gflags glog raspicam)
+  DEPENDS OpenCV gflags glog raspicam protobuf grpc
+)
 
 
 macro(TargetAlias subproject name)
