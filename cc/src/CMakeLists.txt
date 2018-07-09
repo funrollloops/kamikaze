@@ -36,6 +36,7 @@ add_custom_command(
 )
 
 include_directories( "${Protobuf_INCLUDE_DIR}" )
+#include_directories( "${gRPC_INCLUDE_DIR}" )
 include_directories( "${CMAKE_CURRENT_BINARY_DIR}" )
 
 add_library( protocol STATIC
@@ -49,20 +50,22 @@ add_library( arduinoio STATIC arduinoio.cc )
 target_link_libraries ( arduinoio pthread boost_system glog::glog )
 
 add_library( robot STATIC robot.cc )
-target_link_libraries( robot arduinoio gflags glog::glog )
+target_link_libraries( robot arduinoio glog::glog )
+
+add_library( robot_proxy_wrapper robot_proxy_wrapper.cc )
+target_link_libraries( robot_proxy_wrapper protocol glog::glog robot )
+
+add_library( robot_from_flags robot_from_flags.cc )
+target_link_libraries( robot_from_flags robot robot_proxy_wrapper gflags glog::glog )
 
 add_library( capture STATIC capture.cc )
 target_link_libraries( capture raspicam_cv glog::glog ${OpenCV_LIBS})
 
 add_executable( kamikaze main.cc )
-target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot capture gflags glog::glog)
+target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot_from_flags capture gflags glog::glog)
 
 add_executable( robot_test robot_test.cc )
-target_link_libraries( robot_test robot gflags glog::glog )
+target_link_libraries( robot_test robot_from_flags gflags glog::glog )
 
-add_executable( proto_server proto_server.cc )
-target_link_libraries( proto_server protocol )
-
-add_executable( proto_client proto_client.cc )
-target_link_libraries( proto_client protocol )
-
+add_executable( robot_proxy_server robot_proxy_server.cc )
+target_link_libraries( robot_proxy_server protocol robot_from_flags )
