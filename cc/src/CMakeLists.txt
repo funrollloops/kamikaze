@@ -35,8 +35,6 @@ add_custom_command(
   DEPENDS "${CMAKE_SOURCE_DIR}/protocol.proto"
 )
 
-include_directories( "${Protobuf_INCLUDE_DIR}" )
-#include_directories( "${gRPC_INCLUDE_DIR}" )
 include_directories( "${CMAKE_CURRENT_BINARY_DIR}" )
 
 add_library( protocol STATIC

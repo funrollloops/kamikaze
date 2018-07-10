@@ -101,10 +101,8 @@ CMakeDependency(grpc
     -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
     -DgRPC_ZLIB_PROVIDER:STRING=package
     -DgRPC_CARES_PROVIDER:STRING=package
-    -Dc-ares_DIR:PATH=${CMAKE_CURRENT_BINARY_DIR}/c-ares/lib/cmake/c-ares
     -DgRPC_SSL_PROVIDER:STRING=package
     ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
-    -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/grpc
   URL "https://github.com/grpc/grpc/archive/v1.13.0.zip"
   URL_MD5 "25907bbb2ce978b4434008aed98f47ea"
   DEPENDS c-ares protobuf #zlib
