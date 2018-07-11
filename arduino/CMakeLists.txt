@@ -15,7 +15,7 @@ link_directories(${CMAKE_SOURCE_DIR}/../arduino)
 set(${FIRMWARE_NAME}_NO_AUTOLIBS false)
 
 generate_arduino_firmware(${FIRMWARE_NAME})
-target_compile_options(${FIRMWARE_NAME} PRIVATE -Wall -pedantic -Werror)
+target_compile_options(${FIRMWARE_NAME} PRIVATE -Wall -pedantic -Werror -std=c++1y -O2 )
 
 add_custom_target(
   upload-spi
