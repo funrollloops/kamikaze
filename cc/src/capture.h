@@ -100,7 +100,7 @@ public:
   private:
     friend AsyncCaptureSource;
     CaptureScope(AsyncCaptureSource *source) : source(source) {}
-    AsyncCaptureSource *source;
+    AsyncCaptureSource *source = nullptr;
   };
 
   // Returns the next image. Sequential calls are guaranteed not to return the

@@ -25,7 +25,7 @@ DEFINE_bool(track, true,
             "Track faces. When disabled, turret moves manually only.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
-DEFINE_bool(save_video, true, "Enable saving video.");
+DEFINE_bool(save_video, false, "Enable saving video.");
 DEFINE_uint64(
     preview_size, 0,
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
@@ -65,7 +65,7 @@ static const cv::Point kTargetCenter(561, 287);
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
 // Movement.
-static const cv::Point kFovInSteps(500, 450);
+static const cv::Point kFovInSteps(700, 500);
 static constexpr int kMinStep = 4;
 static constexpr std::chrono::seconds kExtraVideoTime(2);
 
@@ -210,18 +210,17 @@ private:
     auto vec = (mouth - kTargetCenter) * kFovInSteps / kImageSize;
     if (abs(vec.x) > kMinStep || abs(vec.y) > kMinStep) {
       maybe_fire_ = 0;
-      return Action{Action::MOVE, pos.add(vec.x, vec.y)};
+    } else {
+      auto fire_time = now();
+      if (++maybe_fire_ > kMinConsecutiveOnTargetToFire &&
+          fire_time - last_fire_ > kMinTimeBetweenFire) {
+        maybe_fire_ = 0;
+        last_fire_ = fire_time;
+        return Action{Action::FIRE};
+      }
     }
 
-    auto fire_time = now();
-    if (++maybe_fire_ > kMinConsecutiveOnTargetToFire &&
-        fire_time - last_fire_ > kMinTimeBetweenFire) {
-      maybe_fire_ = 0;
-      last_fire_ = fire_time;
-      return Action{Action::FIRE};
-    }
-
-    return nullopt;
+    return Action{Action::MOVE, pos.add(vec.x, vec.y)};
   }
 
   std::vector<cv::Rect> DetectMultiScale(cv::CascadeClassifier *cc,
@@ -289,7 +288,8 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     SaveImage(filebase + "+2500ms.jpg", capture->next_image().image);
     if (capture_control) std::this_thread::sleep_for(kExtraVideoTime);
   };
-  for (int key = 0; key != 'q';) {
+  int M = 4;
+  while (true) {
     latest = capture->next_image();
     if (optional<Action> action =
             recognizer->Detect(latest.timestamp, latest.pos, latest.image)) {
@@ -300,16 +300,30 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       case Action::FIRE: fire(); break;
       }
     }
-    key = cv::waitKey(1000 / 30);
+    int key = cv::waitKey(1000 / 30);
     while (key == 'p')
       key = cv::waitKey(0); // Wait for another key to be pressed.
-    const int16_t kManualMove = kFovInSteps.x / 4;
     switch (key) {
-    case 'w': robot->moveTo(robot->tell().add(0, -kManualMove)); break;
-    case 'a': robot->moveTo(robot->tell().add(-kManualMove, 0)); break;
-    case 's': robot->moveTo(robot->tell().add(0, kManualMove)); break;
-    case 'd': robot->moveTo(robot->tell().add(kManualMove, 0)); break;
+    case 255: break;
+    case 'z':
+      if (M<64) M *= 4; else M = 64;
+      std::cout << "step divisor=" << M << std::endl;
+      break;
+    case 'x':
+      if (M>4) M /= 4; else M = 1;
+      std::cout << "step divisor=" << M << std::endl;
+      break;
+    case 'w': robot->moveTo(robot->tell().add(0, -kFovInSteps.y/M)); break;
+    case 'a': robot->moveTo(robot->tell().add(-kFovInSteps.x/M, 0)); break;
+    case 's': robot->moveTo(robot->tell().add(0, kFovInSteps.y/M)); break;
+    case 'd': robot->moveTo(robot->tell().add(kFovInSteps.x/M, 0)); break;
     case 'f': fire(); break;
+    case 'q':
+    case /*ESC*/27:
+    case 'Q':
+      return;  // Quit.
+    default:
+      std::cout << "got key=" << key << std::endl;
     }
   }
 }
@@ -330,7 +344,9 @@ int main(int argc, char **argv) {
   }
 
   if (FLAGS_preview) {
-    cv::namedWindow(kWindowName, cv::WINDOW_NORMAL  | cv::WINDOW_OPENGL);
+    cv::namedWindow(kWindowName,
+                    cv::WINDOW_AUTOSIZE | cv::WINDOW_OPENGL |
+                        cv::WINDOW_GUI_EXPANDED);
     if (FLAGS_preview_size) {
       cv::resizeWindow(kWindowName, FLAGS_preview_size / 10000,
                        FLAGS_preview % 10000);
