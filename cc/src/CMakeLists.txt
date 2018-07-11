@@ -1,3 +1,4 @@
+cmake_minimum_required( VERSION 3.5 )
 project(src C CXX)
 
 find_package( OpenCV 3.2.0 REQUIRED )
@@ -5,6 +6,10 @@ find_package( Threads REQUIRED )
 find_package( gflags REQUIRED )
 find_package( glog 0.3.5 REQUIRED )
 find_package( raspicam REQUIRED )
+
+if(COMMAND cmake_policy)
+  cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
 
 # Load Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)

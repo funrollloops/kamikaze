@@ -70,9 +70,9 @@ ExternalProject_Get_Property(raspicam INSTALL_DIR)
 set(raspicam_DIR ${INSTALL_DIR}/lib/cmake)
 
 CMakeDependency(c-ares
-    -DCARES_SHARED:BOOL=OFF
-    -DCARES_STATIC:BOOL=ON
-    -DCARES_STATIC_PIC:BOOL=ON
+    -DCARES_SHARED:BOOL=0
+    -DCARES_STATIC:BOOL=1
+    -DCARES_STATIC_PIC:BOOL=1
   URL "https://github.com/c-ares/c-ares/archive/cares-1_13_0.zip"
   URL_MD5 "9ff5c3db721b8450ec577f6823492ac2"
 )
