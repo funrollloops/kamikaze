@@ -24,6 +24,16 @@ gflags.DEFINE_string('tty', 'ttyACM0', 'TTY for the Arduino')
 gflags.DEFINE_bool('auto_calibrate', False, 'Auto-calibrate every 30 sec?')
 FLAGS = gflags.FLAGS
 
+# Change this to match the coordinates that the bot _actually_ hits when it
+# fires. Open the annotated image captured during firing in Gimp to get the
+# coordinates.
+TARGET_POS = (961, 358) # (1025, 865)
+
+
+# Use a level + GIMP + one of the fire shots to figure out what the correct
+# angle here should be.
+WEBCAM_SKEW_ANGLE_DEG =  3.6 # 8.1
+
 BLUE = (255, 0, 0)
 GREEN = (0, 255, 0)
 RED = (0, 0, 255)
@@ -45,24 +55,12 @@ FIRE_TIME_SECS = 0.5
 FOV_IN_STEPS = (500, 1000)
 MAX_STEPS = 100 * 16
 MIN_STEPS = 4
-WEBCAM_SKEW_ANGLE_DEG = 3
 
 FRAME_SIZE = (1920, 1080)
 _720p_FRAME_SIZE = (1280, 720)
 
 TARGET_CENTER = (FRAME_SIZE[0] // 2, FRAME_SIZE[1] // 2)
-TARGET_RANGE = (20, 20)
-_720p_TARGET_POS = (538, 490)
-_PARAM_TARGET_POS = (
-    _720p_TARGET_POS[0] * FRAME_SIZE[0] // _720p_FRAME_SIZE[0],
-    _720p_TARGET_POS[1] * FRAME_SIZE[1] // _720p_FRAME_SIZE[1] + 120)
-#_1080_TARGET_POS = (794 + 105, 835)
-#_1080_TARGET_POS = (987, 812)
-#_1080_TARGET_POS = (964, 787)
-_1080_TARGET_POS = (944, 753)
-
-
-TARGET_POS = _1080_TARGET_POS
+TARGET_RANGE = (30, 20)
 
 LEFT = 'left'
 RIGHT = 'right'
@@ -73,7 +71,7 @@ FIRE = 'fire'
 MAYBE_FIRE = 'maybe-fire'
 MIN_CONSECUTIVE_HITS_FOR_FIRE = 5
 
-MIN_FACE_SIZE = (20, 20)
+MIN_FACE_SIZE = (75, 75)
 DETECT_EYES = False
 DETECT_SMILE = False
 MAX_FACES = 1
@@ -268,6 +266,7 @@ def detect_webcam(recognizer):
       cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE[1])
       while not done[0]:
         _, frame = cap.read()
+        frame = cv2.warpAffine(frame, Mrot, FRAME_SIZE)
         latest_image.put(frame)
     finally:
       cap.release()
