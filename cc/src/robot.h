@@ -37,10 +37,27 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos);
 
-class RobotSerial final : public Robot {
+class RobotArduinoIO final : public Robot {
 public:
-  RobotSerial(const std::string& tty, int baud);
-  ~RobotSerial() final;
+  RobotArduinoIO(const std::string& tty, int baud);
+  ~RobotArduinoIO() final;
+
+  virtual Pos tell();
+  virtual void moveTo(Pos pos);
+  virtual void fire(std::chrono::milliseconds time);
+
+private:
+  void valve(bool open);
+
+  ArduinoIO io_;
+  Motor LR_{io_};
+  Motor UD_{io_};
+};
+
+class RobotSerialLineIO final : public Robot {
+public:
+  RobotSerialLineIO(const std::string& tty, int baud);
+  ~RobotSerialLineIO() final;
 
   virtual Pos tell();
   virtual void moveTo(Pos pos);

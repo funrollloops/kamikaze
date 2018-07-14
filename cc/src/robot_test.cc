@@ -32,6 +32,17 @@ void scripted_loop(Robot* robot) {
   }
 }
 
+void scripted_loop2(Robot* robot) {
+#define TELL() std::cout << "pos=" << robot->tell() << std::endl
+  while (true) {
+    TELL();
+    robot->fire(std::chrono::milliseconds(1500));
+    robot->moveTo({-200, 500});
+    robot->moveTo({200, -500});
+  }
+}
+
+
 void repl(Robot* robot) {
   char cmd;
   while (true) {
@@ -56,6 +67,8 @@ void repl(Robot* robot) {
       }
       case 's':
         scripted_loop(robot);
+      case 'S':
+        scripted_loop2(robot);
       case 'r': {
         const Robot::Pos pos = robot->tell();
         int16_t dx, dy;

@@ -21,7 +21,7 @@ std::string Encode(const std::string &command) {
     chk2 += chk1;
   }
   buf << chk2 << chk1;
-  std::cout << AsBytes(buf.str());
+  VLOG(4) << AsBytes(buf.str());
   return buf.str();
 }
 
@@ -111,11 +111,6 @@ State GetLatestState(boost::asio::serial_port &port) {
   return State(c);
 }
 
-void WaitReadyForever(boost::asio::serial_port& port) {
-  while (GetLatestState(port) != State::READY)
-    std::cerr << "error: waiting for ready" << std::endl;
-}
-
 } // namespace
 
 std::ostream& operator<<(std::ostream& os, const AsBytes& b) {
@@ -132,26 +127,30 @@ ArduinoIO::ArduinoIO(const std::string &port, int baud_rate) {
   serial_port_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
   mu_.lock();
   std::thread ready_thread([&] {
-      bool first = true;
+      LOG(INFO) << "Waiting for --tty=" << port << " to be ready.";
+      WaitReadyForever();
+      mu_.unlock();
+      LOG(INFO) << "First WaitReadyForever successful.";
+      // Make sure we communicate at least once per second.
       while (true) {
-        if (first) {
-          first = false;
-        } else {
-          auto since_last_cmd =
-              std::chrono::high_resolution_clock::now() - last_message_;
-          if (since_last_cmd < std::chrono::seconds(1)) {
-            std::this_thread::sleep_for(std::chrono::seconds(1) -
-                                        since_last_cmd);
-            continue;
-          }
-          mu_.lock();
+        auto to_wait =
+            last_message_ + std::chrono::seconds(1) -
+            std::chrono::high_resolution_clock::now();
+        if (to_wait > std::chrono::seconds::zero()) {
+          std::this_thread::sleep_for(to_wait);
+          continue;
         }
-        WaitReadyForever(serial_port_);
-        last_message_  = std::chrono::high_resolution_clock::now();
-        mu_.unlock();
+        std::unique_lock<std::mutex> lock(mu_);
+        WaitReadyForever();
       }
   });
   ready_thread.detach();
+}
+
+void ArduinoIO::WaitReadyForever() {
+  while (GetLatestState(serial_port_) != State::READY)
+    std::cerr << "error: waiting for ready" << std::endl;
+  last_message_  = std::chrono::high_resolution_clock::now();
 }
 
 void ArduinoIO::SendMessage(std::string command) {
@@ -164,13 +163,13 @@ void ArduinoIO::SendMessage(std::string command) {
       std::cerr << "retry " << retry << " for msg " << AsBytes(command);
     if (!writer.write_msg(command, boost::posix_time::seconds(1))) {
       std::cerr << "write error; waiting for ready" << std::endl;
-      WaitReadyForever(serial_port_);
+      WaitReadyForever();
       continue;
     }
     if (GetLatestState(serial_port_) == State::READY) {
       break;
     }
-    WaitReadyForever(serial_port_);
+    WaitReadyForever();
   }
   last_message_ = std::chrono::high_resolution_clock::now();
 }
@@ -196,7 +195,7 @@ void ArduinoSerialLineIO::ClearReadBufferLocked() {
 
 bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
   std::string command(cmd, len);
-  std::cout << "SendLine(" << AsBytes(command) << ")" << std::endl;
+  VLOG(3) << "SendLine(" << AsBytes(command) << ")" << std::endl;
   command += "\n";
   std::unique_lock<std::mutex> lock(mu_);
   return SendBytesLocked(command);
@@ -214,16 +213,16 @@ bool ArduinoSerialLineIO::SendBytesLocked(const std::string& command) {
 bool ArduinoSerialLineIO::SendAndRead(const char *cmd, std::size_t len, std::string* response) {
   response->clear();
   std::string command(cmd, len);
-  std::cout << "SendAndRead(" << AsBytes(command) << ")";
+  VLOG(3) << "SendAndRead(" << AsBytes(command) << ")";
   command += "\n";
   std::unique_lock<std::mutex> lock(mu_);
   ClearReadBufferLocked();
   if (!SendBytesLocked(command)) {
-    std::cout << ": send failed" << std::endl;
+    LOG(WARNING) << ": send failed" << std::endl;
     return false;
   }
   *response = ReadLineLocked();
-  std::cout << ": " << AsBytes(*response) << std::endl;
+  VLOG(3) << ": " << AsBytes(*response) << std::endl;
   return true;
 }
 

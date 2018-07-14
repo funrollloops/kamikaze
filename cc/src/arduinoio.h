@@ -36,6 +36,7 @@ public:
 
 private:
   void SendMessage(std::string command);
+  void WaitReadyForever();
 
   boost::asio::io_service io_;
   boost::asio::serial_port serial_port_{io_};

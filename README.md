@@ -4,13 +4,12 @@
 To use main.py, run:
 
 ```bash
-sudo apt install python-opencv python-pip python-serial
-sudo pip install python-gflags six
+sudo apt install python-opencv python-serial python-gflags python-six
 sudo usermod -a -G dialout $(whoami)
 ```
 
 cc/ and arduino/ have separate setup instructions / READMEs, but unless you are
-planning to use the C++ version (no Arduino suport) or flash the Arduino these
+planning to use the C++ version (no Arduino support) or flash the Arduino these
 are not required.
 
 Recognition will run faster if you build OpenCV as suggested in `cc/README.md`, but it' not required.

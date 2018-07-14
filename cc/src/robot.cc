@@ -11,11 +11,66 @@ std::ostream& operator<<(std::ostream& os, const Robot::Pos& pos) {
   return os << pos.first << ", " << pos.second;
 }
 
-RobotSerial::RobotSerial(const std::string &tty, int baud) : io_(tty, baud) {}
+RobotArduinoIO::RobotArduinoIO(const std::string &tty, int baud)
+    : io_(tty, baud) {
+  valve(false);
 
-RobotSerial::~RobotSerial() {}
+  LR_.cmd.dir_pin = 3;
+  LR_.cmd.pulse_pin = 2;
+  LR_.cmd.pos_trigger_pin = 6;
+  LR_.cmd.neg_trigger_pin = ArduinoIO::kUnconnected3;
+  LR_.cmd.forward = true;
+  LR_.cmd.steps = 100;
+  LR_.ms1 = 14;
+  LR_.ms2 = 15;
+  LR_.ms3 = 16;
 
-Robot::Pos RobotSerial::tell() {
+  UD_.cmd.dir_pin = 4;
+  UD_.cmd.pulse_pin = 5;
+  UD_.cmd.pos_trigger_pin = ArduinoIO::kUnconnected3;
+  UD_.cmd.neg_trigger_pin = 7;
+  UD_.cmd.forward = true;
+  UD_.cmd.steps = 100;
+  UD_.ms1 = 8;
+  UD_.ms2 = 9;
+  UD_.ms3 = 10;
+
+  LR_.SetSpeed(Motor::SIXTEENTH);
+  UD_.SetSpeed(Motor::SIXTEENTH);
+}
+
+RobotArduinoIO::~RobotArduinoIO() {}
+
+Robot::Pos RobotArduinoIO::tell() {
+  return {0, 0};
+}
+
+void RobotArduinoIO::moveTo(Pos pos) {
+  if (pos.first != 0) {
+    LR_.Move(pos.first < 0 ? Motor::LEFT : Motor::RIGHT, std::abs(pos.first));
+  }
+  if (pos.second != 0) {
+    UD_.Move(pos.second < 0 ? Motor::UP : Motor::DOWN, std::abs(pos.second));
+  }
+}
+
+void RobotArduinoIO::fire(std::chrono::milliseconds time) {
+  valve(true);
+  std::this_thread::sleep_for(time);
+  valve(false);
+}
+
+void RobotArduinoIO::valve(bool open) {
+  io_.WriteOutput(11, open);
+  io_.WriteOutput(13, open);
+}
+
+RobotSerialLineIO::RobotSerialLineIO(const std::string &tty, int baud)
+    : io_(tty, baud) {}
+
+RobotSerialLineIO::~RobotSerialLineIO() {}
+
+Robot::Pos RobotSerialLineIO::tell() {
   std::string response;
   while (!io_.SendAndRead("t", 1, &response) ||
          response.size() != sizeof(Pos)) {
@@ -23,10 +78,10 @@ Robot::Pos RobotSerial::tell() {
                  << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  return *reinterpret_cast<const Pos*>(response.data());
+  return *reinterpret_cast<const Pos *>(response.data());
 }
 
-void RobotSerial::moveTo(Pos pos) {
+void RobotSerialLineIO::moveTo(Pos pos) {
   struct __attribute__((packed)) {
     char h;
     int16_t first, second;
@@ -34,7 +89,7 @@ void RobotSerial::moveTo(Pos pos) {
   io_.SendLine(reinterpret_cast<const char*>(&cmd), sizeof(cmd));
 }
 
-void RobotSerial::fire(std::chrono::milliseconds time) {
+void RobotSerialLineIO::fire(std::chrono::milliseconds time) {
   struct __attribute__((packed)) {
     char h;
     uint16_t ms;
