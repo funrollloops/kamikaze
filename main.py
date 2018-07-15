@@ -59,7 +59,6 @@ MIN_STEPS = 4
 FRAME_SIZE = (1920, 1080)
 _720p_FRAME_SIZE = (1280, 720)
 
-TARGET_CENTER = (FRAME_SIZE[0] // 2, FRAME_SIZE[1] // 2)
 TARGET_RANGE = (30, 20)
 
 LEFT = 'left'
@@ -137,7 +136,7 @@ class Recognizer(object):
 
     def dist((x, y, w, h)):
       center = x + w // 2, y + h // 2
-      dist = (center[0] - TARGET_CENTER[0])**2 + (center[1] - TARGET_CENTER[1]
+      dist = (center[0] - TARGET_POS[0])**2 + (center[1] - TARGET_POS[1]
                                                  )**2
       return dist
 
@@ -182,9 +181,6 @@ class Recognizer(object):
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.imshow('img', img)
     cv2.resizeWindow('img', 1280, 720)
-    if self.maybe_fire > MIN_CONSECUTIVE_HITS_FOR_FIRE:
-      actions += ((FIRE, 0),)
-      self.maybe_fire = 0
     for action in actions:
       self.do_action(img, *action)
     if FLAGS.auto_calibrate and time.time() - self.last_action_time > 30:
@@ -193,24 +189,33 @@ class Recognizer(object):
   def determine_action(self, mouth_center):
     def to_steps(pixels, i):
       steps = pixels * FOV_IN_STEPS[i] // FRAME_SIZE[i]
-      return min(max(steps, MIN_STEPS), MAX_STEPS)
+      if self.maybe_fire > 0:
+        steps = steps / 4
+      return steps
 
     action = ()
+    maybe_fire = []
+    if (abs(TARGET_POS[0] - mouth_center[0]) < TARGET_RANGE[0] and
+        abs(TARGET_POS[1] - mouth_center[1]) < TARGET_RANGE[1]):
+      self.maybe_fire += 1
+      maybe_fire = [(MAYBE_FIRE, self.maybe_fire)]
+    else:
+      self.maybe_fire = 0
+
+    if self.maybe_fire > MIN_CONSECUTIVE_HITS_FOR_FIRE:
+      self.maybe_fire = 0
+      return ((FIRE, 0),)
+
     if mouth_center[0] < TARGET_POS[0]:
       action += ((LEFT, to_steps(TARGET_POS[0] - mouth_center[0], 0)),)
-    elif mouth_center[0] > TARGET_POS[0] + TARGET_RANGE[0]:
+    elif mouth_center[0] > TARGET_POS[0]:
       action += ((RIGHT, to_steps(mouth_center[0] - TARGET_POS[0], 0)),)
     if mouth_center[1] < TARGET_POS[1]:
       action += ((UP, to_steps(TARGET_POS[1] - mouth_center[1], 1)),)
-    elif mouth_center[1] > TARGET_POS[1] + TARGET_RANGE[1]:
+    elif mouth_center[1] > TARGET_POS[1]:
       action += ((DOWN, to_steps(mouth_center[1] - TARGET_POS[1], 1)),)
     action = sorted(action, key=lambda x: x[1], reverse=True)
-    if len(action) == 0:
-      self.maybe_fire += 1
-      action += ((MAYBE_FIRE, self.maybe_fire),)
-    else:
-      self.maybe_fire = 0
-    return action
+    return action + maybe_fire
 
   @staticmethod
   def smile_filter(smiles):
