@@ -417,12 +417,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
   }
 }
 
-}  // namespace
-
-int main(int argc, char **argv) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  google::InstallFailureSignalHandler();
-  google::InitGoogleLogging(argv[0]);
+std::unique_ptr<CaptureSource> GetCaptureSource(int argc) {
   std::unique_ptr<CaptureSource> source;
   if (FLAGS_raspicam) {
     source =
@@ -431,10 +426,19 @@ int main(int argc, char **argv) {
     source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
                                                    kImageSize.y);
   }
-  if (FLAGS_webcam_skew_angle != 0) {
+  if (source && FLAGS_webcam_skew_angle != 0) {
     source = std::make_unique<RotatedCaptureSource>(std::move(source),
                                                     FLAGS_webcam_skew_angle);
   }
+  return std::move(source);
+}
+
+}  // namespace
+
+int main(int argc, char **argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InstallFailureSignalHandler();
+  google::InitGoogleLogging(argv[0]);
 
   if (FLAGS_preview) {
     cv::namedWindow(kWindowName,
@@ -448,7 +452,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<Robot> robot = RobotFromFlags();
   Recognizer recognizer;
-  if (source) {
+  if (std::unique_ptr<CaptureSource> source = GetCaptureSource(argc)) {
     AsyncCaptureSource async_source(robot.get(), std::move(source));
     DetectWebcam(&async_source, &recognizer, robot.get());
   } else {
