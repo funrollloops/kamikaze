@@ -72,7 +72,7 @@ static const char kWindowName[] = "preview";
 
 static const cv::Point kImageSize(1280, 720);
 // Targeting.
-static constexpr int kTargetSize = 16;
+static constexpr int kTargetSize = 8;
 // static const cv::Point kTargetCenter(546, 263);
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
