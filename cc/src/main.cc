@@ -41,7 +41,7 @@ constexpr char kFaceCascadeFile[] =
     "../haarcascades/haarcascade_frontalface_default.xml";
 constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
 constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
-static const cv::Size kMinFaceSize(50, 50);
+static const cv::Size kMinFaceSize(75, 75);
 static const cv::Size kMaxFaceSize(100, 100);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);

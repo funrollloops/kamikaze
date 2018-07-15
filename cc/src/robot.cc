@@ -47,7 +47,7 @@ Robot::Pos RobotArduinoIO::tell() {
 
 void RobotArduinoIO::moveTo(Pos pos) {
   if (pos.first != 0) {
-    LR_.Move(pos.first < 0 ? Motor::LEFT : Motor::RIGHT, std::abs(pos.first));
+    LR_.Move(pos.first < 0 ? Motor::LEFT : Motor::RIGHT, std::abs(pos.first)/2);
   }
   if (pos.second != 0) {
     UD_.Move(pos.second < 0 ? Motor::UP : Motor::DOWN, std::abs(pos.second));
