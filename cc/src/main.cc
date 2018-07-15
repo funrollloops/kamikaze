@@ -74,6 +74,34 @@ static constexpr std::chrono::seconds kExtraVideoTime(2);
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
 time_point now() { return std::chrono::high_resolution_clock::now(); }
 
+class RotatedCaptureSource : public CaptureSource {
+public:
+  RotatedCaptureSource(std::unique_ptr<CaptureSource> source, float skew_angle)
+      : source_(std::move(source)), skew_angle_(skew_angle) {}
+  bool isOpened() final { return source_->isOpened(); }
+  bool grab() final { return source_->grab(); }
+  bool retrieve(cv::Mat *image) {
+    if (!source_->retrieve(&temp_))
+      return false;
+    cv::warpAffine(temp_, *image, rotation_matrix_, size_);
+    return true;
+  }
+  std::string describe() {
+    std::ostringstream buf;
+    buf << source_->describe() << " rotated " << skew_angle_ << " degrees";
+    return buf.str();
+  }
+  cv::Size size() const { return source_->size(); }
+
+private:
+  const std::unique_ptr<CaptureSource> source_;
+  const cv::Size size_{source_->size()};
+  float skew_angle_;
+  const cv::Mat rotation_matrix_{cv::getRotationMatrix2D(
+      cv::Point(size_.width / 2, size_.height / 2), skew_angle_, 1.0)};
+  cv::Mat temp_;
+};
+
 struct Action {
   enum ActionEnum { MOVE, FIRE };
   ActionEnum action;
@@ -352,6 +380,10 @@ int main(int argc, char **argv) {
   } else if (argc == 1) {
     source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
                                                    kImageSize.y);
+  }
+  if (FLAGS_webcam_skew_angle != 0) {
+    source = std::make_unique<RotatedCaptureSource>(std::move(source),
+                                                    FLAGS_webcam_skew_angle);
   }
 
   if (FLAGS_preview) {
