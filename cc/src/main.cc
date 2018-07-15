@@ -321,15 +321,18 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       if (M>4) M /= 4; else M = 1;
       std::cout << "step divisor=" << M << std::endl;
       break;
+    case /*up_arrow=*/82:
     case 'w': robot->moveTo(robot->tell().add(0, -kFovInSteps.y/M)); break;
+    case /*left_arrow=*/81:
     case 'a': robot->moveTo(robot->tell().add(-kFovInSteps.x/M, 0)); break;
+    case /*down_arrow=*/84:
     case 's': robot->moveTo(robot->tell().add(0, kFovInSteps.y/M)); break;
+    case /*right_arrow=*/83:
     case 'd': robot->moveTo(robot->tell().add(kFovInSteps.x/M, 0)); break;
     case 'f': fire(); break;
     case 'q':
+      return; // Quit.
     case /*ESC*/27:
-    case 'Q':
-      return;  // Quit.
     default:
       std::cout << "got key=" << key << std::endl;
     }
