@@ -380,6 +380,15 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       key = cv::waitKey(0); // Wait for another key to be pressed.
     switch (key) {
     case 255: break;
+    case 'h':
+    case '?':
+      std::cout << "h or ?: this help message" << std::endl
+                << "z/x: reduce/increase manual step size" << std::endl
+                << "t: stop/start tracking" << std::endl
+                << "v: toggle updating preview window" << std::endl
+                << "wasd or arrow keys: manually move turret" << std::endl
+                << "f: manually fire" << std::endl;
+      break;
     case 'z':
       if (M<64) M *= 4; else M = 64;
       std::cout << "step divisor=" << M << std::endl;
@@ -388,6 +397,8 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       if (M>4) M /= 4; else M = 1;
       std::cout << "step divisor=" << M << std::endl;
       break;
+    case 't': FLAGS_track = !FLAGS_track; break;
+    case 'v': FLAGS_preview = !FLAGS_preview; break;
     case /*up_arrow=*/82:
     case 'w': robot->moveTo(robot->tell().add(0, -kFovInSteps.y/M)); break;
     case /*left_arrow=*/81:
