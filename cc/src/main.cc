@@ -25,6 +25,8 @@ DEFINE_bool(track, true,
             "Track faces. When disabled, turret moves manually only.");
 DEFINE_bool(track_while_maybe_fire, true,
             "Keep tracking when within target zone.");
+DEFINE_bool(tunnel_vision, false,
+            "Check for faces close to target area first.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
 DEFINE_bool(save_video, false, "Enable saving video.");
@@ -149,24 +151,52 @@ public:
         << " error loading " << kFaceCascadeFile;
   }
 
+  std::vector<cv::Rect> FilterFaces(std::vector<cv::Rect> faces,
+                                    cv::Mat *input_img) {
+    for (auto face = faces.begin(); face != faces.end();) {
+      bool too_big = face->size().width > kMaxFaceSize.width ||
+                     face->size().height > kMaxFaceSize.height;
+      LOG_EVERY_N(INFO, 100) << " face width=" << face->width
+                             << " height=" << face->height;
+      if (input_img)
+        PlotFeature(*input_img, *face, too_big ? kDarkBlue : kBlue);
+      if (too_big) face = faces.erase(face);
+      else ++face;
+    }
+    return std::move(faces);
+  }
+
+  std::vector<cv::Rect> GetCandidateFaces(cv::Mat& input_img) {
+    cv::cvtColor(input_img, gray_, cv::COLOR_BGR2GRAY);
+    // First do tunnel-vision detection.
+    if (FLAGS_tunnel_vision) {
+      std::vector<cv::Rect> faces =
+          DetectMultiScale(face_detector_.get(), gray_(tunnel_vision_area_),
+                           1.3, 5, kMinFaceSize);
+      faces = FilterFaces(faces, /*input_img=*/nullptr);
+      if (!faces.empty()) {
+        for (cv::Rect& face : faces) {
+          face.x += tunnel_vision_area_.x;
+          face.y += tunnel_vision_area_.y;
+        }
+        return std::move(FilterFaces(faces, &input_img));  // Just to re-plot.
+      }
+    }
+    // Then full-scale.
+    std::vector<cv::Rect> faces =
+        DetectMultiScale(face_detector_.get(), gray_, 1.3, 5, kMinFaceSize);
+    return FilterFaces(faces, &input_img);
+  }
+
   optional<Action> Detect(time_point timestamp, Robot::Pos pos,
                           cv::Mat &input_img) {
     auto start_decide = now();
     if (timestamp - last_action_ <=  std::chrono::milliseconds(10)) {
       return nullopt;
     }
-    cv::cvtColor(input_img, gray_, cv::COLOR_BGR2GRAY);
     std::ostringstream line1;
     std::ostringstream line2;
-    auto faces =
-        DetectMultiScale(face_detector_.get(), gray_, 1.3, 5, kMinFaceSize);
-    for (auto face = faces.begin(); face != faces.end();) {
-      bool too_big = face->size().width > kMaxFaceSize.width ||
-                     face->size().height > kMaxFaceSize.height;
-      PlotFeature(input_img, *face, too_big ? kDarkBlue : kBlue);
-      if (too_big) face = faces.erase(face);
-      else ++face;
-    }
+    auto faces = GetCandidateFaces(input_img);
     PlotFeature(input_img, kTargetArea, kTeal);
     line2 << "pos=" << pos << " ";
     optional<Action> action;
@@ -282,6 +312,9 @@ private:
   time_point last_decide_;
   std::unique_ptr<cv::CascadeClassifier> face_detector_{
       new cv::CascadeClassifier};
+  cv::Rect tunnel_vision_area_{kTargetCenter.x - kMinFaceSize.width,
+                               kTargetCenter.y - kMinFaceSize.height,
+                               kMinFaceSize.width * 2, kMinFaceSize.height * 2};
 };
 
 void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
