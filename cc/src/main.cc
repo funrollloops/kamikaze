@@ -3,10 +3,13 @@
 #include <ctime>
 #include <experimental/optional>
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <opencv2/face.hpp>
+#include <opencv2/face/facerec.hpp>
 #include <opencv2/opencv.hpp>
 
 #include "capture.h"
@@ -27,10 +30,12 @@ DEFINE_uint64(
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
     " 800x600");
 
-// Output flags.
+// Feature flags.
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
 DEFINE_bool(save_video, false, "Enable saving video.");
+DEFINE_bool(face_recognition, false,
+           "Enable face recognition / short-term blacklisting.");
 
 // Debugging flags.
 DEFINE_bool(track, true,
@@ -156,6 +161,45 @@ public:
         << " error loading " << kFaceCascadeFile;
   }
 
+  const cv::Size kFaceRecognizeSize = {96, 96};
+
+  cv::Mat ExtractNormalizedFace(const cv::Mat& img, const cv::Rect& face) {
+    cv::Mat normed;
+    cv::resize(img(face), normed, kFaceRecognizeSize);
+    return normed;
+  }
+
+  void set_label(std::string label) {
+    label_ = std::move(label);
+    auto num = labels_.find(label);
+    if (num == labels_.end()) {
+      label_int_ = labels_.size();
+      labels_.emplace(label_, label_int_);
+      label_rmap_.emplace(label_int_, label_);
+    } else {
+      label_int_ = num->second;
+    }
+  }
+
+  std::unordered_map<std::string, int> labels_;
+  std::unordered_map<int, std::string> label_rmap_;
+  bool needs_training_ = true;
+
+  void RecognizeFace(const cv::Mat& face) {
+    double confidence;
+    int label = -1;
+    if (!needs_training_) {
+      face_recognizer_->predict(face, label, confidence);
+      needs_training_ = false;
+    }
+    auto label_name_it = label_rmap_.find(label);
+    LOG(INFO) << "RecognizeFace label=" << label << "\tlabel_name="
+              << (label_name_it == label_rmap_.end() ? "" : label_name_it->second)
+              << "\tpredicted=" << label << "\tconfidence=" << confidence;
+    face_recognizer_->update(std::vector<cv::Mat>{face},
+                             std::vector<int>{label_int_});
+  }
+
   optional<Action> Detect(time_point timestamp, Robot::Pos pos,
                           cv::Mat &input_img) {
     if (timestamp - last_action_ <=  std::chrono::milliseconds(10)) {
@@ -178,6 +222,11 @@ public:
     optional<Action> action;
     if (!faces.empty()) {
       auto face = BestFace(faces);
+      if (FLAGS_face_recognition) {
+        auto face_for_detection = ExtractNormalizedFace(gray_, face);
+        cv::imshow("extracted face", face_for_detection);
+        RecognizeFace(face_for_detection);
+      }
       cv::Rect mouth = GuessMouthLocation(face);
       PlotFeature(input_img, mouth, kYellow);
       action = ChooseAction(input_img, Center(mouth), pos);
@@ -286,11 +335,18 @@ private:
   time_point last_decide_;
   std::unique_ptr<cv::CascadeClassifier> face_detector_{
       new cv::CascadeClassifier};
+  cv::Ptr<cv::face::LBPHFaceRecognizer> face_recognizer_{
+      cv::face::LBPHFaceRecognizer::create()};
+  std::string label_;
+  int label_int_;
 };
 
 void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
+  LOG(INFO) << "Detecting " << argc << " images.";
   cv::Mat image;
   for (int i = 0; i < argc; ++i) {
+    std::string filename = argv[i];
+    std::string basename = filename.substr(0, filename.rfind('+'));
     std::cout << "=== " << argv[i] << std::endl;
     image = cv::imread(argv[i], 1);
     if (!image.data) {
@@ -298,6 +354,7 @@ void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
       continue;
     }
     auto start = now();
+    recognizer->set_label(basename);
     recognizer->Detect(start, robot->tell(), image); // Ignore returned action.
     auto latency_ms = (now() - start) / std::chrono::milliseconds(1);
     std::cout << "latency: " << latency_ms << " ms" << std::endl;
@@ -392,7 +449,7 @@ int main(int argc, char **argv) {
     source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
                                                    kImageSize.y);
   }
-  if (FLAGS_webcam_skew_angle != 0) {
+  if (source && FLAGS_webcam_skew_angle != 0) {
     source = std::make_unique<RotatedCaptureSource>(std::move(source),
                                                     FLAGS_webcam_skew_angle);
   }
