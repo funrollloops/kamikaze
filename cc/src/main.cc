@@ -14,25 +14,32 @@
 #include "robot.h"
 #include "robot_from_flags.h"
 
+// Camera configuration.
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
 DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
-DEFINE_bool(
-    wait_between_images, true,
-    "When doing detection on images, set to true to wait after each image.");
+DEFINE_double(webcam_skew_angle, 2, "Degrees to rotate camera output CW");
+
+// Preview window configuration.
 DEFINE_bool(preview, true, "Enable preview window.");
-DEFINE_bool(track, true,
-            "Track faces. When disabled, turret moves manually only.");
-DEFINE_bool(track_while_maybe_fire, true,
-            "Keep tracking when within target zone.");
-DEFINE_string(save_directory, "",
-              "Enable saving pictures/video and plath them in this directory.");
-DEFINE_bool(save_video, false, "Enable saving video.");
 DEFINE_uint64(
     preview_size, 0,
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
     " 800x600");
-DEFINE_double(webcam_skew_angle, 2, "Degrees to rotate camera output CW");
+
+// Output flags.
+DEFINE_string(save_directory, "",
+              "Enable saving pictures/video and plath them in this directory.");
+DEFINE_bool(save_video, false, "Enable saving video.");
+
+// Debugging flags.
+DEFINE_bool(track, true,
+            "Track faces. When disabled, turret moves manually only.");
+DEFINE_bool(track_while_maybe_fire, true,
+            "Keep tracking when within target zone.");
+DEFINE_bool(
+    wait_between_images, true,
+    "When doing detection on images, set to true to wait after each image.");
 
 namespace {
 using std::experimental::optional;
