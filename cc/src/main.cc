@@ -32,20 +32,24 @@ DEFINE_uint64(
     preview_size, 0,
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
     " 800x600");
+DEFINE_double(webcam_skew_angle, 2, "Degrees to rotate camera output CW");
 
 namespace {
 using std::experimental::optional;
 using std::experimental::nullopt;
 
-constexpr char kFaceCascadeFile[] =
-    "../haarcascades/haarcascade_frontalface_default.xml";
-constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
-constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
+// static const cv::Point kTargetCenter(561, 287);  // v2 prototype, 8ft.
+static const cv::Point kTargetCenter(567, 212);  // v1 bot, Chi-pressure, 8ft.
 static const cv::Size kMinFaceSize(75, 75);
 static const cv::Size kMaxFaceSize(100, 100);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
 static const int kMinConsecutiveOnTargetToFire = 5;
+
+constexpr char kFaceCascadeFile[] =
+    "../haarcascades/haarcascade_frontalface_default.xml";
+constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
+constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
 
 #define FIND_EYES 0
 
@@ -63,7 +67,6 @@ static const cv::Point kImageSize(1280, 720);
 // Targeting.
 static constexpr int kTargetSize = 16;
 // static const cv::Point kTargetCenter(546, 263);
-static const cv::Point kTargetCenter(561, 287);
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
 // Movement.
