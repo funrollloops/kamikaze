@@ -119,6 +119,7 @@ class Recognizer(object):
         'haarcascades/haarcascade_smile.xml')
     self.robot = robot
     self.last_action_time = time.time()
+    self.last_decide_time = time.clock()
     self.maybe_fire = 0
 
   @staticmethod
@@ -171,10 +172,13 @@ class Recognizer(object):
       else:
         smile = self.guess_mouth_location(face)
       actions[:] = self.determine_action(self.mouth_center(smile))
-      cv2.putText(img, ' '.join('%s(%d)' % a for a in actions), (0, 40),
+      cv2.putText(img, ' '.join('%s(%d)' % a for a in actions), (5, 50),
                   cv2.FONT_HERSHEY_PLAIN, 2, WHITE)
-    cv2.putText(img, '%.2f fps' % (1 / (time.clock() - start_time)), (0, 20),
-                cv2.FONT_HERSHEY_PLAIN, 1, WHITE)
+    now = time.clock()
+    latency_msg = 'i2d latency %i ms / d2d latency %i ms' % (
+        (now - start_time) * 1000, (now - self.last_decide_time) * 1000)
+    self.last_decide_time = now
+    cv2.putText(img, latency_msg, (5, 25), cv2.FONT_HERSHEY_PLAIN, 2, WHITE)
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.imshow('img', img)
     cv2.resizeWindow('img', 1280, 720)

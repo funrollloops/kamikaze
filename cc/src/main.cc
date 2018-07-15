@@ -148,10 +148,13 @@ public:
         line2 << "maybe_fire(" << maybe_fire_ << ") ";
       }
     }
-    last_action_ = now();
-    line1 << "latency "
-          << ((last_action_ - timestamp) / std::chrono::milliseconds(1))
+    auto decide_time = now();
+    line1 << "i2d latency "
+          << ((decide_time - timestamp) / std::chrono::milliseconds(1)) << " ms"
+          << " / d2d latency "
+          << ((decide_time - last_decide_) / std::chrono::milliseconds(1))
           << " ms";
+    last_decide_ = decide_time;
     if (FLAGS_preview) {
       const cv::Size line1_size =
           cv::getTextSize(line1.str(), cv::FONT_HERSHEY_PLAIN,
@@ -238,6 +241,7 @@ private:
   Mat gray_;
   time_point last_action_;
   time_point last_fire_;
+  time_point last_decide_;
   std::unique_ptr<cv::CascadeClassifier> face_detector_{
       new cv::CascadeClassifier};
 };
