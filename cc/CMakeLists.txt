@@ -17,6 +17,17 @@ macro(CMakeDependency name)
   string(REPLACE ";" "|" CMAKE_PREFIX_PATH_STR "${CMAKE_PREFIX_PATH}")
 endmacro()
 
+ExternalProject_Add(
+  opencv_contrib
+  URL "https://github.com/opencv/opencv_contrib/archive/3.4.2.zip"
+  UPDATE_COMMAND ""
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND "")
+
+ExternalProject_Get_Property(opencv_contrib SOURCE_DIR)
+set(OpenCV_Extra_Modules ${SOURCE_DIR}/modules)
+
 # TODO: TBB can provide a speed boost. Figure out why BUILD/WITH_TBB=on doesnt
 # work or find a workaround.
 CMakeDependency(OpenCV
@@ -38,7 +49,7 @@ CMakeDependency(OpenCV
     -DBUILD_opencv_java=OFF
     -DBUILD_opencv_ml=ON
     -DBUILD_opencv_objdetect=ON
-    -DBUILD_opencv_photo=OFF
+    -DBUILD_opencv_photo=ON
     -DBUILD_opencv_python2=OFF
     -DBUILD_opencv_python3=OFF
     -DBUILD_opencv_shape=OFF
@@ -46,19 +57,24 @@ CMakeDependency(OpenCV
     -DBUILD_opencv_superres=OFF
     -DBUILD_opencv_ts=OFF
     -DBUILD_opencv_videostab=OFF
+    -DBUILD_opencv_face=ON
     -DWITH_CUDA=OFF
     -DWITH_CUFFT=OFF
     -DWITH_CUBLAS=OFF
-  URL "https://github.com/opencv/opencv/archive/3.2.0.tar.gz"
+    -DOPENCV_EXTRA_MODULES_PATH=${OpenCV_Extra_Modules}
+  URL "https://github.com/opencv/opencv/archive/3.4.2.zip"
+  URL_MD5 "9e9ebe9c1fe98c468f6e53f5c3c49716"
   UPDATE_COMMAND ""
-  URL_MD5 1ea44a1d98c126ad40079d8eb914a72e)
+  DEPENDS opencv_contrib)
 
 CMakeDependency(gflags
   URL "https://github.com/gflags/gflags/archive/v2.2.1.zip"
+  URL_MD5 "2d988ef0b50939fb50ada965dafce96b"
   UPDATE_COMMAND "")
 
 CMakeDependency(glog
   URL "https://github.com/google/glog/archive/v0.3.5.zip"
+  URL_MD5 "454766d0124951091c95bad33dafeacd"
   UPDATE_COMMAND ""
   DEPENDS gflags)
 

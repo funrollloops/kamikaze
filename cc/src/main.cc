@@ -350,6 +350,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     while (key == 'p')
       key = cv::waitKey(0); // Wait for another key to be pressed.
     switch (key) {
+    case -1:
     case 255: break;
     case 'z':
       if (M<64) M *= 4; else M = 64;
