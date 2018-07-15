@@ -61,4 +61,5 @@ void AsyncCaptureSource::FinishCapture() {
   std::unique_lock<std::mutex> lock(mu_);
   CHECK(writer_) << "Tried to FinishCapture when none was in progress.";
   writer_->release();
+  writer_ = std::experimental::nullopt;
 }
