@@ -151,6 +151,7 @@ public:
 
   optional<Action> Detect(time_point timestamp, Robot::Pos pos,
                           cv::Mat &input_img) {
+    auto start_decide = now();
     if (timestamp - last_action_ <=  std::chrono::milliseconds(10)) {
       return nullopt;
     }
@@ -183,10 +184,12 @@ public:
     }
     auto decide_time = now();
     line1 << "i2d latency "
-          << ((decide_time - timestamp) / std::chrono::milliseconds(1)) << " ms"
-          << " / d2d latency "
+          << ((decide_time - timestamp) / std::chrono::milliseconds(1))
+          << " ms / d2d latency "
           << ((decide_time - last_decide_) / std::chrono::milliseconds(1))
-          << " ms";
+          << " ms / detect time "
+          << ((decide_time - start_decide) / std::chrono::milliseconds(1))
+          << "ms";
     last_decide_ = decide_time;
     if (FLAGS_preview) {
       const cv::Size line1_size =
