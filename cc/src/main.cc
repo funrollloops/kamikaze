@@ -23,6 +23,8 @@ DEFINE_bool(
 DEFINE_bool(preview, true, "Enable preview window.");
 DEFINE_bool(track, true,
             "Track faces. When disabled, turret moves manually only.");
+DEFINE_bool(track_while_maybe_fire, true,
+            "Keep tracking when within target zone.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
 DEFINE_bool(save_video, false, "Enable saving video.");
@@ -223,6 +225,8 @@ private:
       }
     }
 
+    if (!FLAGS_track_while_maybe_fire && maybe_fire_ > 0)
+      return nullopt;
     return Action{Action::MOVE, pos.add(vec.x, vec.y)};
   }
 
