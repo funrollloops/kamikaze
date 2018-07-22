@@ -36,6 +36,9 @@ DEFINE_uint64(
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"
     " 800x600");
 DEFINE_double(webcam_skew_angle, 2, "Degrees to rotate camera output CW");
+DEFINE_string(face_cascade_file,
+              "haarcascades/haarcascade_frontalface_default.xml",
+              "Path to haarcascade face model.");
 
 namespace {
 using std::experimental::optional;
@@ -48,11 +51,6 @@ static const cv::Size kMaxFaceSize(110, 110);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
 static const int kMinConsecutiveOnTargetToFire = 5;
-
-constexpr char kFaceCascadeFile[] =
-    "../haarcascades/haarcascade_frontalface_default.xml";
-constexpr char kEyeCascadeFile[] = "../haarcascades/haarcascade_eye.xml";
-constexpr char kMouthCascadeFile[] = "../haarcascades/haarcascade_smile.xml";
 
 #define FIND_EYES 0
 
@@ -147,8 +145,8 @@ public:
   using Mat = cv::Mat;
 
   Recognizer() {
-    CHECK(face_detector_->load(kFaceCascadeFile))
-        << " error loading " << kFaceCascadeFile;
+    CHECK(face_detector_->load(FLAGS_face_cascade_file))
+        << " error loading " << FLAGS_face_cascade_file;
   }
 
   std::vector<cv::Rect> FilterFaces(std::vector<cv::Rect> faces,
