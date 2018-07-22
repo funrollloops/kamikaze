@@ -1,39 +1,42 @@
-
-## Setup instructions
-
-To use main.py, run:
+## Build instructions
 
 ```bash
-sudo apt install python-opencv python-serial python-gflags python-six
-sudo usermod -a -G dialout $(whoami)
+sudo apt install \
+  cmake ninja-build git build-essential pkg-config \
+  qt4-default \
+  libavcodec-dev libavformat-dev libswscale-dev libavutil-dev \
+  libjpeg-dev libboost-all-dev
+mkdir build
+cd build
+cmake -GNinja ..
+ninja
 ```
 
-cc/ and arduino/ have separate setup instructions / READMEs, but unless you are
-planning to use the C++ version (no Arduino support) or flash the Arduino these
-are not required.
+## Run the Blaster controller
+The main program is `kamikaze`; run with all features enabled:
+```bash
+ninja -C build kamikaze &&
+build/kamikaze --logtostderr \
+  --spi /dev/spidev0.0 \
+  --save_directory=$(pwd)/output
+```
 
-Recognition will run faster if you build OpenCV as suggested in `cc/README.md`, but it' not required.
+`--spi` enables talking to the slave over SPI, which will only work on a
+Raspberry Pi connected to the daughterboard with a flashed Atmega328p (see the
+arduino/ folder). If using the prototype that communicates over USB Serial,
+pass `--arduinoio_tty=/dev/ttyACM0` (or ACM1 etc) instead of `--spi`.
 
+On a dev machine leave off both `--spi` and `--arduinoio_tty` to stub out all
+daughterboard communication.
 
-## Run
+## CLI for controlling the hardware
 
-`./main.py --fake --webcam=0 --tty=ttyACM0`
+Test the Arduino communication code with `robot_test`:
+```bash
+ninja -C build robot_test && build/robot_test
+```
 
-* `--nofake` enables signalling the Arduino. No limits in place yet!
-* `--tty` is the name of the tty to use without the /dev/.
-* type `q` while the preview window is focused to exit.
-* by default, recognition will be done on webcam input. Run recognition on
-  images by passing them as command line arguments.
-* `--webcam=1`: you may want to use webcam=1 if you have >1 webcam.
-* note that `open-mouth.*` and `train.sh` are currently unused.
-* `--nopreview`: will disable the preview window, if you want to test
-  recognition speed on a corpus of images.  Abort with Ctrl-C.
-
-## To make things move
-
-Pass the `--nofake` flag.
-
-## To run the uploader
+## Run the uploader
 
 The uploader code lives in `uploader/`. Currently, it only monitors the shots
 directory and prints out the files that it would have uploaded. To run it, first
@@ -47,3 +50,11 @@ credentials in the boto3 format.
 Then run it with an environment variable, like a normal python script:
 
 `AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py`
+
+## Install services (optional)
+
+Install the systemd service to auto-start the controller with
+```bash
+sudo systemctl enable $(pwd)/kamikaze-controller.service
+./configure_autossh.sh  # Might need some configuration.
+```

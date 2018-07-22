@@ -26,11 +26,11 @@ DEFINE_bool(track, true,
             "Track faces. When disabled, turret moves manually only.");
 DEFINE_bool(track_while_maybe_fire, true,
             "Keep tracking when within target zone.");
-DEFINE_bool(tunnel_vision, false,
+DEFINE_bool(tunnel_vision, true,
             "Check for faces close to target area first.");
 DEFINE_string(save_directory, "",
               "Enable saving pictures/video and plath them in this directory.");
-DEFINE_bool(save_video, false, "Enable saving video.");
+DEFINE_bool(save_video, true, "Enable saving video.");
 DEFINE_uint64(
     preview_size, 0,
     "Set fixed size, last four digits for vertical resolution. e.g. 8000600 for"

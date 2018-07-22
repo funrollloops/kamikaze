@@ -112,7 +112,7 @@ CMakeDependency(grpc
 
 
 ExternalProject_Add(
-  src
+  controller
   DOWNLOAD_COMMAND ""
   LIST_SEPARATOR |
   CMAKE_ARGS
@@ -120,8 +120,8 @@ ExternalProject_Add(
     -Draspicam_DIR=${raspicam_DIR}
     -DProtobuf_DIR=${Protobuf_DIR}
   INSTALL_DIR ${CMAKE_BINARY_DIR}
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/src
-  BINARY_DIR ${CMAKE_BINARY_DIR}/src-build
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/controller
+  BINARY_DIR ${CMAKE_BINARY_DIR}
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
   DEPENDS OpenCV gflags glog raspicam protobuf grpc
 )
