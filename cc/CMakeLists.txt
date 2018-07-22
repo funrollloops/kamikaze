@@ -49,16 +49,18 @@ CMakeDependency(OpenCV
     -DWITH_CUDA=OFF
     -DWITH_CUFFT=OFF
     -DWITH_CUBLAS=OFF
-  URL "https://github.com/opencv/opencv/archive/3.2.0.tar.gz"
-  UPDATE_COMMAND ""
-  URL_MD5 1ea44a1d98c126ad40079d8eb914a72e)
+  URL "https://github.com/opencv/opencv/archive/3.4.2.zip"
+  URL_MD5 "9e9ebe9c1fe98c468f6e53f5c3c49716"
+  UPDATE_COMMAND "")
 
 CMakeDependency(gflags
   URL "https://github.com/gflags/gflags/archive/v2.2.1.zip"
+  URL_MD5 "2d988ef0b50939fb50ada965dafce96b"
   UPDATE_COMMAND "")
 
 CMakeDependency(glog
   URL "https://github.com/google/glog/archive/v0.3.5.zip"
+  URL_MD5 "454766d0124951091c95bad33dafeacd"
   UPDATE_COMMAND ""
   DEPENDS gflags)
 
