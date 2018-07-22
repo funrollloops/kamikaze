@@ -33,14 +33,18 @@ CMakeDependency(OpenCV
     -DBUILD_JAVA=OFF
     -DBUILD_DOCS=OFF
     -DBUILD_opencv_calib3d=OFF
+    -DBUILD_opencv_dnn=OFF
+    -DBUILD_opencv_features2d=OFF
     -DBUILD_opencv_flann=OFF
     -DBUILD_opencv_highgui=ON
+    -DBUILD_opencv_java_bindings_generator=OFF
     -DBUILD_opencv_java=OFF
     -DBUILD_opencv_ml=ON
     -DBUILD_opencv_objdetect=ON
     -DBUILD_opencv_photo=OFF
     -DBUILD_opencv_python2=OFF
     -DBUILD_opencv_python3=OFF
+    -DBUILD_opencv_python_bindings_generator=OFF
     -DBUILD_opencv_shape=OFF
     -DBUILD_opencv_stitching=OFF
     -DBUILD_opencv_superres=OFF
@@ -49,6 +53,7 @@ CMakeDependency(OpenCV
     -DWITH_CUDA=OFF
     -DWITH_CUFFT=OFF
     -DWITH_CUBLAS=OFF
+    -DBUILD_SHARED_LIBS=OFF
   URL "https://github.com/opencv/opencv/archive/3.4.2.zip"
   URL_MD5 "9e9ebe9c1fe98c468f6e53f5c3c49716"
   UPDATE_COMMAND "")
