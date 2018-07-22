@@ -126,7 +126,7 @@ ExternalProject_Add(
     -DProtobuf_DIR=${Protobuf_DIR}
   INSTALL_DIR ${CMAKE_BINARY_DIR}
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/controller
-  BINARY_DIR ${CMAKE_BINARY_DIR}
+  BINARY_DIR ${CMAKE_BINARY_DIR}/controller-build
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
   DEPENDS OpenCV gflags glog raspicam protobuf grpc
 )
@@ -139,5 +139,5 @@ macro(TargetAlias subproject name)
     DEPENDS ${subproject})
 endmacro()
 
-TargetAlias(src kamikaze)
-TargetAlias(src robot_test)
+TargetAlias(controller kamikaze)
+TargetAlias(controller robot_test)
