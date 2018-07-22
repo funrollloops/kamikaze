@@ -43,7 +43,7 @@ using std::experimental::nullopt;
 
 // static const cv::Point kTargetCenter(561, 287);  // v2 prototype, 8ft.
 static const cv::Point kTargetCenter(588, 296);  // v1 bot, Chi-pressure, 8ft.
-static const cv::Size kMinFaceSize(75, 75);
+static const cv::Size kMinFaceSize(80, 80);
 static const cv::Size kMaxFaceSize(110, 110);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
