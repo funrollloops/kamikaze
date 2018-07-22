@@ -20,6 +20,7 @@ DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
 DEFINE_bool(
     wait_between_images, true,
     "When doing detection on images, set to true to wait after each image.");
+DEFINE_bool(enable_fire, false, "Enable firing.");
 DEFINE_bool(preview, true, "Enable preview window.");
 DEFINE_bool(track, true,
             "Track faces. When disabled, turret moves manually only.");
@@ -41,9 +42,9 @@ using std::experimental::optional;
 using std::experimental::nullopt;
 
 // static const cv::Point kTargetCenter(561, 287);  // v2 prototype, 8ft.
-static const cv::Point kTargetCenter(567, 212);  // v1 bot, Chi-pressure, 8ft.
+static const cv::Point kTargetCenter(588, 296);  // v1 bot, Chi-pressure, 8ft.
 static const cv::Size kMinFaceSize(75, 75);
-static const cv::Size kMaxFaceSize(100, 100);
+static const cv::Size kMaxFaceSize(110, 110);
 static const auto kMinTimeBetweenFire = std::chrono::seconds(5);
 static const auto kFireTime = std::chrono::milliseconds(500);
 static const int kMinConsecutiveOnTargetToFire = 5;
@@ -67,13 +68,12 @@ static const char kWindowName[] = "preview";
 
 static const cv::Point kImageSize(1280, 720);
 // Targeting.
-static constexpr int kTargetSize = 16;
-// static const cv::Point kTargetCenter(546, 263);
+static constexpr int kTargetSize = 4;
 static const cv::Rect kTargetArea(kTargetCenter - kTargetSize / 2,
                                   cv::Size(kTargetSize, kTargetSize));
 // Movement.
 static const cv::Point kFovInSteps(700, 500);
-static constexpr int kMinStep = 4;
+static constexpr int kMinStep = 2;
 static constexpr std::chrono::seconds kExtraVideoTime(2);
 
 using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -198,6 +198,12 @@ public:
     std::ostringstream line2;
     auto faces = GetCandidateFaces(input_img);
     PlotFeature(input_img, kTargetArea, kTeal);
+    if (!FLAGS_track) {
+      line2 << "NOTRACK ";
+    }
+    if (!FLAGS_enable_fire) {
+      line2 << "NOFIRE ";
+    }
     line2 << "pos=" << pos << " ";
     optional<Action> action;
     if (!faces.empty()) {
@@ -277,6 +283,7 @@ private:
     CHECK(input_img.cols == kImageSize.x) << "cols=" << input_img.cols
                                           << " expected_width=" << kImageSize.x;
     auto vec = (mouth - kTargetCenter) * kFovInSteps / kImageSize;
+    if (!FLAGS_enable_fire) maybe_fire_ = 0;
     if (abs(vec.x) > kMinStep || abs(vec.y) > kMinStep) {
       maybe_fire_ = 0;
     } else {
@@ -338,7 +345,9 @@ void DetectImages(Recognizer *recognizer, Robot *robot, int argc, char **argv) {
 void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
                   Robot *robot) {
   AsyncCaptureSource::LatestImage latest;
-  auto fire = [&]() {
+  auto fire = [&](bool is_manual) {
+    if (!is_manual && !FLAGS_enable_fire) return;
+    if (!is_manual) FLAGS_enable_fire = false;
     if (FLAGS_save_directory.empty()) {
       robot->fire(kFireTime);
       return;
@@ -372,7 +381,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       case Action::MOVE:
         if (FLAGS_track) robot->moveTo(*action->move_to);
         break;
-      case Action::FIRE: fire(); break;
+      case Action::FIRE: fire(/*is_manual=*/false); break;
       }
     }
     int key = cv::waitKey(1);
@@ -385,6 +394,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       std::cout << "h or ?: this help message" << std::endl
                 << "z/x: reduce/increase manual step size" << std::endl
                 << "t: stop/start tracking" << std::endl
+                << "y: enable/disable firing" << std::endl
                 << "v: toggle updating preview window" << std::endl
                 << "wasd or arrow keys: manually move turret" << std::endl
                 << "f: manually fire" << std::endl;
@@ -398,6 +408,7 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
       std::cout << "step divisor=" << M << std::endl;
       break;
     case 't': FLAGS_track = !FLAGS_track; break;
+    case 'y': FLAGS_enable_fire = !FLAGS_enable_fire; break;
     case 'v': FLAGS_preview = !FLAGS_preview; break;
     case /*up_arrow=*/82:
     case 'w': robot->moveTo(robot->tell().add(0, -kFovInSteps.y/M)); break;
@@ -407,7 +418,8 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
     case 's': robot->moveTo(robot->tell().add(0, kFovInSteps.y/M)); break;
     case /*right_arrow=*/83:
     case 'd': robot->moveTo(robot->tell().add(kFovInSteps.x/M, 0)); break;
-    case 'f': fire(); break;
+    case 'f': fire(/*is_manual=*/true); break;
+    case '`': robot->fire(std::chrono::milliseconds(100)); break;
     case 'q':
       return; // Quit.
     case /*ESC*/27:
