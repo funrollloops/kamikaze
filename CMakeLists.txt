@@ -125,6 +125,7 @@ ExternalProject_Add(
     -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
     -Draspicam_DIR=${raspicam_DIR}
     -DProtobuf_DIR=${Protobuf_DIR}
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   INSTALL_DIR ${CMAKE_BINARY_DIR}
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/controller
   BINARY_DIR ${CMAKE_BINARY_DIR}/controller-build
