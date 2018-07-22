@@ -10,7 +10,10 @@
 
 #include <glog/logging.h>
 #include <opencv2/opencv.hpp>
+
+#ifdef ENABLE_RASPICAM
 #include <raspicam/raspicam_cv.h>
+#endif
 
 #include "robot.h"
 
@@ -48,6 +51,7 @@ class WebcamCaptureSource : public CaptureSource {
     const cv::Size size_;
 };
 
+#ifdef ENABLE_RASPICAM
 class RaspiCamCaptureSource : public CaptureSource {
   public:
     RaspiCamCaptureSource(int width, int height): size_(width, height) {
@@ -71,6 +75,7 @@ class RaspiCamCaptureSource : public CaptureSource {
     raspicam::RaspiCam_Cv capture_;
     const cv::Size size_;
 };
+#endif
 
 class AsyncCaptureSource {
 public:

@@ -3,6 +3,8 @@ project( kamikaze )
 
 include(ExternalProject)
 
+option(ENABLE_RASPICAM "Build with support for CSI-connected cameras" OFF)
+
 macro(CMakeDependency name)
   ExternalProject_Add(${name}
     LIST_SEPARATOR |
@@ -69,13 +71,16 @@ CMakeDependency(glog
   UPDATE_COMMAND ""
   DEPENDS gflags)
 
-CMakeDependency(raspicam
-    -DBUILD_SHARED_LIBS=OFF
-  URL "https://github.com/cedricve/raspicam/archive/3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee.zip"
-  UPDATE_COMMAND ""
-  DEPENDS OpenCV)
-ExternalProject_Get_Property(raspicam INSTALL_DIR)
-set(raspicam_DIR ${INSTALL_DIR}/lib/cmake)
+if (ENABLE_RASPICAM)
+  CMakeDependency(raspicam
+      -DBUILD_SHARED_LIBS=OFF
+    URL "https://github.com/cedricve/raspicam/archive/3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee.zip"
+    UPDATE_COMMAND ""
+    DEPENDS OpenCV)
+  ExternalProject_Get_Property(raspicam INSTALL_DIR)
+  set(raspicam_DIR ${INSTALL_DIR}/lib/cmake)
+  set(DEPEND_RASPICAM raspicam)
+endif()
 
 CMakeDependency(c-ares
     -DCARES_SHARED:BOOL=0
@@ -123,6 +128,7 @@ ExternalProject_Add(
   LIST_SEPARATOR |
   CMAKE_ARGS
     -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_STR}
+    -DENABLE_RASPICAM=${ENABLE_RASPICAM}
     -Draspicam_DIR=${raspicam_DIR}
     -DProtobuf_DIR=${Protobuf_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -130,7 +136,7 @@ ExternalProject_Add(
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/controller
   BINARY_DIR ${CMAKE_BINARY_DIR}/controller-build
   INSTALL_COMMAND ln -sf <BINARY_DIR>/kamikaze <BINARY_DIR>/robot_test <INSTALL_DIR>/
-  DEPENDS OpenCV gflags glog raspicam protobuf grpc
+  DEPENDS OpenCV gflags glog protobuf grpc ${DEPEND_RASPICAM}
 )
 
 

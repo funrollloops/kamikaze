@@ -16,7 +16,9 @@
 
 DEFINE_int32(webcam, 0,
              "Webcam# to use. Usually 0 for built-in, 1+ for external.");
+#ifdef ENABLE_RASPICAM
 DEFINE_bool(raspicam, false, "Fetch images from raspicam.");
+#endif
 DEFINE_bool(
     wait_between_images, true,
     "When doing detection on images, set to true to wait after each image.");
@@ -430,10 +432,15 @@ void DetectWebcam(AsyncCaptureSource *capture, Recognizer *recognizer,
 
 std::unique_ptr<CaptureSource> GetCaptureSource(int argc) {
   std::unique_ptr<CaptureSource> source;
+
+#ifdef ENABLE_RASPICAM
   if (FLAGS_raspicam) {
     source =
         std::make_unique<RaspiCamCaptureSource>(kImageSize.x, kImageSize.y);
-  } else if (argc == 1) {
+  }
+#endif
+
+  if (!source && argc == 1) {
     source = std::make_unique<WebcamCaptureSource>(FLAGS_webcam, kImageSize.x,
                                                    kImageSize.y);
   }

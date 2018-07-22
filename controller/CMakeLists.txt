@@ -1,11 +1,16 @@
 cmake_minimum_required( VERSION 3.5 )
 project(src C CXX)
 
+option(ENABLE_RASPICAM "Build with support for CSI-connected cameras" OFF)
+
 find_package( OpenCV 3.2.0 REQUIRED )
 find_package( Threads REQUIRED )
 find_package( gflags REQUIRED )
 find_package( glog 0.3.5 REQUIRED )
-find_package( raspicam REQUIRED )
+
+if (ENABLE_RASPICAM)
+  find_package( raspicam REQUIRED )
+endif()
 
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
@@ -62,7 +67,11 @@ add_library( robot_from_flags robot_from_flags.cc )
 target_link_libraries( robot_from_flags robot robot_proxy_wrapper gflags glog::glog )
 
 add_library( capture STATIC capture.cc )
-target_link_libraries( capture raspicam_cv glog::glog ${OpenCV_LIBS})
+target_link_libraries( capture glog::glog ${OpenCV_LIBS} )
+if (ENABLE_RASPICAM)
+  target_link_libraries( capture raspicam_cv )
+  target_compile_definitions( capture PUBLIC ENABLE_RASPICAM=1 )
+endif()
 
 add_executable( kamikaze main.cc )
 target_link_libraries( kamikaze ${OpenCV_LIBS} pthread robot_from_flags capture gflags glog::glog)
