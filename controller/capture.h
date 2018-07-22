@@ -121,7 +121,8 @@ private:
 
   // Thread management.
   std::thread retrieve_thread_;
-  std::mutex mu_;
+  std::mutex writer_mu_;
+  std::mutex latest_image_mu_;
   std::condition_variable new_image_ready_cv_;
   std::atomic<bool> done_{false};
   bool new_image_ready_ = false;
