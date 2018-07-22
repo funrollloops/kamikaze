@@ -70,6 +70,7 @@ CMakeDependency(glog
   DEPENDS gflags)
 
 CMakeDependency(raspicam
+    -DBUILD_SHARED_LIBS=OFF
   URL "https://github.com/cedricve/raspicam/archive/3c07bd9d19e55e2fc23b3a2bd642b01a4cb400ee.zip"
   UPDATE_COMMAND ""
   DEPENDS OpenCV)
