@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # TODO: switch to avr-cmake
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/arduino-cmake/cmake/ArduinoToolchain.cmake) # Arduino Toolchain
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -O2" )
+
+set(CMAKE_CXX_STANDARD 17)
 
 project( kamikaze-slave C CXX)
 set(FIRMWARE_NAME kamikaze-slave-firmware )
@@ -15,7 +20,7 @@ link_directories(${CMAKE_SOURCE_DIR}/../arduino)
 set(${FIRMWARE_NAME}_NO_AUTOLIBS false)
 
 generate_arduino_firmware(${FIRMWARE_NAME})
-target_compile_options(${FIRMWARE_NAME} PRIVATE -Wall -pedantic -Werror -std=c++1y -O2 )
+target_compile_options(${FIRMWARE_NAME} PRIVATE -Wall -Wextra -pedantic -Werror -std=c++1y -O3 )
 
 add_custom_target(
   upload-spi
