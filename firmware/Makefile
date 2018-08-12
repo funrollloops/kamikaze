@@ -10,7 +10,7 @@
 GCC_MCU        = atmega328p
 AVRDUDE_DEVICE = m328p
 CLOCK          = 8000000
-PROGRAMMER     = -C avrdude.conf -c pi_spi -P /dev/spidev0.0 -b 200000
+PROGRAMMER     = -C +avrdude.conf -c pi_spi -P /dev/spidev0.0 -b 200000
 SRCS           = kamikaze.cc
 FUSES          = -U lfuse:w:0x64:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
 
