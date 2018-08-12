@@ -7,11 +7,12 @@
 #                is connected.
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
-DEVICE     = atmega328p
-CLOCK      = 8000000
-PROGRAMMER = -C avrdude.conf -c pi_spi -P /dev/spidev0.0 -b 200000
-SRCS       = kamikaze.cc
-FUSES      = -U lfuse:w:0x64:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
+GCC_MCU        = atmega328p
+AVRDUDE_DEVICE = m328p
+CLOCK          = 8000000
+PROGRAMMER     = -C avrdude.conf -c pi_spi -P /dev/spidev0.0 -b 200000
+SRCS           = kamikaze.cc
+FUSES          = -U lfuse:w:0x64:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
 
 
 ######################################################################
@@ -19,10 +20,10 @@ FUSES      = -U lfuse:w:0x64:m -U hfuse:w:0xdd:m -U efuse:w:0xff:m
 
 # Tune the lines below only if you know what you are doing:
 
-AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
+AVRDUDE = avrdude $(PROGRAMMER) -p $(AVRDUDE_DEVICE)
 CXX = avr-g++
 CPPFLAGS = -Wall -Werror -pedantic -Wextra -Os
-CPPFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I /usr/lib/avr/include
+CPPFLAGS += -DF_CPU=$(CLOCK) -mmcu=$(GCC_MCU) -I /usr/lib/avr/include
 CXXFLAGS = -std=c++11
 COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
 
