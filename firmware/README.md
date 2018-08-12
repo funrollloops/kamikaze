@@ -1,15 +1,10 @@
 ## Instructions
 
+Enable SPI on the Raspberry Pi by following these instructions:
+https://learn.sparkfun.com/tutorials/raspberry-pi-spi-and-i2c-tutorial
+
 ```
 sudo apt install arduino-core
-git submodule init # from the parent directory
-git submodule update
-mkdir arduino/build
-cd arduino/build
-cmake ..
 make  # build
-make upload  # upload
+sudo make flash  # upload
 ```
-
-You may need to change the TTY listed in CMakeLists.txt.
-
