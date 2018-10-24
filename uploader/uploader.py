@@ -1,10 +1,6 @@
 #!/usr/bin/env python
+"""Script that uploads captured blaster JPGs to S3."""
 
-"""Script that uploads captured blaster JPGs to a central server.
-
-For now, all this does is monitor the shots directory (or the given directory)
-and log out the paths that would have been uploaded.
-"""
 import logging
 import multiprocessing
 import os

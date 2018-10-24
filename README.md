@@ -38,9 +38,10 @@ ninja -C build robot_test && build/robot_test
 
 ## Run the uploader
 
-The uploader code lives in `uploader/`. Currently, it only monitors the shots
-directory and prints out the files that it would have uploaded. To run it, first
-install the requirements in uploader/requirements.txt:
+The uploader code lives in `uploader/`. It monitors the `shots` directory, or
+any directory that is passed to it, and uploads any files that it finds that
+[meet the specification](https://github.com/audiodude/kamikaze/blob/master/uploader/file_collector.py#L11).
+To run it, first install the requirements in uploader/requirements.txt:
 
 `$ sudo pip install -r uploader/requirements.txt`
 
@@ -49,7 +50,22 @@ credentials in the boto3 format.
 
 Then run it with an environment variable, like a normal python script:
 
-`AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py`
+`AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py --watch_dir=/path/to/shots --upload_db=path/to/uploads.sqlite`
+
+The `AWS_SHARED_CREDENTIALS_FILE` environment variable is consumed by the boto3
+AWS integration library and used automatically to connect to S3, where the
+files are uploaded to. Also note that by default the images are uploaded to the
+`blaster-gallery` bucket in the us-east-2 region.
+
+The `--watch_dir` flag is the directory that will be monitored for images
+in the specified format.
+
+The `--upload_db` flag is the path to the sqlite database file that will be
+used to track uploads. It's perfectly fine to pass the path to a file that does
+not exist yet, and it will be created.
+
+See also the repo that handles the display of these images (private):
+[raygun](https://github.com/audiodude/raygun)
 
 ## Install services (optional)
 
