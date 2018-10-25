@@ -60,7 +60,7 @@ script:
 The `AWS_SHARED_CREDENTIALS_FILE` environment variable is consumed by the boto3
 AWS integration library and used automatically to connect to S3, where the
 files are uploaded to. Also note that by default the images are uploaded to the
-`blaster-gallery` bucket in the us-east-2 region.
+`blaster-gallery` bucket in the `US West (N. California)` region.
 
 The `--watch_dir` flag is the directory that will be monitored for images
 in the specified format.
