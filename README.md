@@ -36,9 +36,9 @@ Test the Arduino communication code with `robot_test`:
 ninja -C build robot_test && build/robot_test
 ```
 
-## Run the uploader
+## The uploader binary
 
-The uploader code lives in `uploader/`. It monitors the `shots` directory, or
+The uploader binary lives in `uploader/`. It monitors the `shots` directory, or
 any directory that is passed to it, and uploads any files that it finds that
 [meet the specification](https://github.com/audiodude/kamikaze/blob/master/uploader/file_collector.py#L11).
 To run it, first install the requirements in uploader/requirements.txt:
@@ -46,9 +46,14 @@ To run it, first install the requirements in uploader/requirements.txt:
 `$ sudo pip install -r uploader/requirements.txt`
 
 Next, obtain a copy of aws_credentials.secret, which contains the AWS
-credentials in the boto3 format.
+credentials in the boto3 format. This format is documented on
+[the boto3 site](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#shared-credentials-file)
+Basically, if you have an `aws_access_key_id` and an `aws_secret_access_key`,
+you can easily create this plain text file for yourself. Otherwise, you can
+obtain credentials from a teammate.
 
-Then run it with an environment variable, like a normal python script:
+Finally, run the binary  with an environment variable, like a normal python
+script:
 
 `AWS_SHARED_CREDENTIALS_FILE=aws_credentials.secret python uploader/uploader.py --watch_dir=/path/to/shots --upload_db=path/to/uploads.sqlite`
 
