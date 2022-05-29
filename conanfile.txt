@@ -1,0 +1,11 @@
+[requires]
+opencv/3.4.17
+gflags/2.2.2
+glog/0.6.0
+protobuf/3.20.0
+grpc/1.45.2
+boost/1.79.0
+
+[generators]
+cmake_find_package
+cmake_paths

@@ -2,15 +2,19 @@
 
 ```bash
 sudo apt install \
-  cmake ninja-build git build-essential pkg-config \
-  qt4-default \
-  libavcodec-dev libavformat-dev libswscale-dev libavutil-dev \
-  libjpeg-dev libboost-all-dev
-mkdir build
-cd build
-cmake -GNinja ..
-ninja
+  cmake ninja-build git build-essential pkg-config qt4-default python3-pip \
+  libavcodec-dev libavformat-dev libswscale-dev libavutil-dev libjpeg-dev
+pip install conan
+mkdir -p build/Release
+(cd build/Release && conan install ../.. --build=missing)
+cmake -B build/Release -DCMAKE_BUILD_TYPE=Release -GNinja \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy-14
+ninja -C build/Release
 ```
+
+Using a virtualenv, CC=clang-14, CXX=clang++-14 are recommended. conan should
+use the same compiler for dependencies as the main build. direnv can be used to
+automate loading the virtualenv and setting the compiler options.
 
 ## Run the Blaster controller
 The main program is `kamikaze`; run with all features enabled:
