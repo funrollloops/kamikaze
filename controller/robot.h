@@ -1,5 +1,4 @@
-#ifndef __BLASTER_ROBOT_H__
-#define __BLASTER_ROBOT_H__
+#pragma once
 
 #include <stdio.h>
 
@@ -126,5 +125,3 @@ private:
 
   int fd_;
 };
-
-#endif

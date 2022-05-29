@@ -1,5 +1,4 @@
-#ifndef __BLASTER_CAPTURE_H__
-#define __BLASTER_CAPTURE_H__
+#pragma once
 
 #include <chrono>
 #include <condition_variable>
@@ -132,5 +131,3 @@ private:
   std::atomic<bool> done_{false};
   bool new_image_ready_ = false;
 };
-
-#endif

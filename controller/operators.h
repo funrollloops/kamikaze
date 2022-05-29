@@ -1,5 +1,4 @@
-#ifndef __BLASTER_OPERATORS_H__
-#define __BLASTER_OPERATORS_H__
+#pragma once
 
 #include <opencv2/opencv.hpp>
 
@@ -39,5 +38,3 @@ cv::Point Center(cv::Rect r) {
 double sqdist(cv::Point a, cv::Point b) {
   return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 }
-
-#endif
