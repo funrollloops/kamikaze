@@ -27,72 +27,36 @@ std::string Encode(const std::string &command) {
 
 class port_wrapper {
 public:
-  // Constructs a blocking reader, pass in an open serial_port and
-  // a timeout in milliseconds.
-  port_wrapper(boost::asio::serial_port &port)
-      : port(port), timer(port.get_io_service()),
-        error(true) {}
+ port_wrapper(boost::asio::serial_port &port) : port(port) {}
 
-  // Reads a character or times out. val is not modified unless the function
-  // returns true.  returns false if the read times out.
-  bool read_char(char &val, boost::posix_time::time_duration timeout) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    port.get_io_service().reset();
-    std::size_t bytes_read;
-    boost::asio::async_read(
-        port, boost::asio::buffer(&c, 1),
-        boost::bind(&port_wrapper::read_complete, this,
-                    boost::asio::placeholders::error,
-                    boost::asio::placeholders::bytes_transferred,
-                    &bytes_read));
-    // Setup a deadline time to implement our timeout.
-    timer.expires_from_now(timeout);
-    timer.async_wait(boost::bind(&port_wrapper::time_out, this,
-                                 boost::asio::placeholders::error));
-    port.get_io_service().run();
-    if (bytes_read == 1) {
-      val = c;
-      return true;
-    }
-    return false;
+ // Reads a character or times out. val is not modified unless the function
+ // returns true.  returns false if the read times out.
+ bool read_char(char &val, std::chrono::milliseconds timeout) {
+   std::unique_lock<std::mutex> lock(mutex_);
+   char c;
+   std::future<std::size_t> bytes_read = boost::asio::async_read(
+       port, boost::asio::buffer(&c, 1), boost::asio::use_future);
+   auto deadline = std::chrono::steady_clock::now() + timeout;
+   if (bytes_read.wait_until(deadline) == std::future_status::ready &&
+       bytes_read.get() == 1) {
+     val = c;
+     return true;
+   }
+   return false;
   }
 
-  bool write_msg(std::string msg, boost::posix_time::time_duration timeout) {
+  bool write_msg(std::string msg, std::chrono::milliseconds timeout) {
     std::unique_lock<std::mutex> lock(mutex_);
-    port.get_io_service().reset();
-    std::size_t bytes_written = 0;
-    boost::asio::async_write(
-        port, boost::asio::buffer(msg),
-        boost::bind(&port_wrapper::read_complete, this, 
-          boost::asio::placeholders::error,
-          boost::asio::placeholders::bytes_transferred,
-          &bytes_written));
-    timer.expires_from_now(timeout);
-    timer.async_wait(boost::bind(&port_wrapper::time_out, this,
-                                 boost::asio::placeholders::error));
-    port.get_io_service().run();
-    return bytes_written == msg.size();
+    std::future<std::size_t> bytes_written = boost::asio::async_write(
+        port, boost::asio::buffer(msg), boost::asio::use_future);
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    return bytes_written.wait_until(deadline) == std::future_status::ready &&
+           bytes_written.get() == msg.size();
   }
 
 private:
   std::mutex mutex_;
   boost::asio::serial_port &port;
-  char c;
-  boost::asio::deadline_timer timer;
-  bool error;
-
-  // Called when an async read completes or has been cancelled
-  void read_complete(const boost::system::error_code &error,
-                     size_t bytes_transferred,
-                     size_t *copy_bytes_to) {
-    *copy_bytes_to = error ? 0 : bytes_transferred;
-    timer.cancel();
-  }
-
-  void time_out(const boost::system::error_code &error) {
-    if (error) return;  // timer was cancelled.
-    port.cancel();
-  }
 };
 
 enum class State : char {
@@ -104,7 +68,7 @@ enum class State : char {
 State GetLatestState(boost::asio::serial_port &port) {
   char c = 0;
   port_wrapper reader(port);
-  while (reader.read_char(c, boost::posix_time::seconds(c ? 0 : 1)) || !c) {
+  while (reader.read_char(c, std::chrono::seconds(c ? 0 : 1)) || !c) {
     if (c != char(State::READY) && c != char(State::ERROR))
       c = 0;
   }
@@ -161,7 +125,7 @@ void ArduinoIO::SendMessage(std::string command) {
   for (int retry = 0; retry < 1000; ++retry) {
     if (retry > 0)
       std::cerr << "retry " << retry << " for msg " << AsBytes(command);
-    if (!writer.write_msg(command, boost::posix_time::seconds(1))) {
+    if (!writer.write_msg(command, std::chrono::seconds(1))) {
       std::cerr << "write error; waiting for ready" << std::endl;
       WaitReadyForever();
       continue;
@@ -190,7 +154,7 @@ void ArduinoSerialLineIO::ClearReadBufferLocked() {
   port_wrapper reader{serial_port_};
   tcflush(serial_port_.lowest_layer().native_handle(), TCIFLUSH);
   char byte;
-  while (reader.read_char(byte, boost::posix_time::milliseconds(1))) { }
+  while (reader.read_char(byte, std::chrono::milliseconds(1))) { }
 }
 
 bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
@@ -203,7 +167,7 @@ bool ArduinoSerialLineIO::SendLine(const char* cmd, std::size_t len) {
 
 bool ArduinoSerialLineIO::SendBytesLocked(const std::string& command) {
   port_wrapper writer{serial_port_};
-  if (writer.write_msg(command, boost::posix_time::milliseconds(100))) {
+  if (writer.write_msg(command, std::chrono::milliseconds(100))) {
     tcflush(serial_port_.lowest_layer().native_handle(), TCOFLUSH);
     return true;
   }
@@ -235,7 +199,7 @@ std::string ArduinoSerialLineIO::ReadLineLocked() {
   std::string line;
   port_wrapper reader{serial_port_};
   char byte;
-  while (reader.read_char(byte, boost::posix_time::milliseconds(50))) {
+  while (reader.read_char(byte, std::chrono::milliseconds(50))) {
     if (byte == '\n') return line;
     line.append(1, byte);
   }
