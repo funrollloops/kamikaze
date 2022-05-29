@@ -163,7 +163,7 @@ public:
       if (too_big) face = faces.erase(face);
       else ++face;
     }
-    return std::move(faces);
+    return faces;
   }
 
   std::vector<cv::Rect> GetCandidateFaces(cv::Mat& input_img) {
@@ -179,7 +179,7 @@ public:
           face.x += tunnel_vision_area_.x;
           face.y += tunnel_vision_area_.y;
         }
-        return std::move(FilterFaces(faces, &input_img));  // Just to re-plot.
+        return FilterFaces(faces, &input_img);  // Just to re-plot.
       }
     }
     // Then full-scale.
@@ -448,7 +448,7 @@ std::unique_ptr<CaptureSource> GetCaptureSource(int argc) {
     source = std::make_unique<RotatedCaptureSource>(std::move(source),
                                                     FLAGS_webcam_skew_angle);
   }
-  return std::move(source);
+  return source;
 }
 
 }  // namespace

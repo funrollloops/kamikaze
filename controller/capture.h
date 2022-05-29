@@ -18,6 +18,7 @@
 
 class CaptureSource {
   public:
+    virtual ~CaptureSource() = default;
     virtual bool isOpened() = 0;
     virtual bool grab() = 0;
     virtual bool retrieve(cv::Mat *image) = 0;
